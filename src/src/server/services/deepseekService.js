@@ -1,9 +1,9 @@
-const axios = require('axios');
+const axios = import('axios');
 
 const deepseekService = {
   generateImage: async (prompt, options = {}) => {
     try {
-      const response = await axios.post('https://api.deepseek.com/v1/images/generations', {
+      const response = await axios.post(`${process.env.DEEPSEEK_API_URL}/images/generations`, {
         prompt,
         n: options.n || 1,
         size: options.size || "1024x1024",
@@ -27,11 +27,12 @@ const deepseekService = {
 
   enhanceImage: async (imageUrl, options = {}) => {
     try {
-      const response = await axios.post('https://api.deepseek.com/v1/images/edits', {
+      const response = await axios.post(`${process.env.DEEPSEEK_API_URL}/images/variations`, {
         image: imageUrl,
         prompt: options.prompt || "Enhance this image",
         size: options.size || "1024x1024",
-        response_format: "url"
+        response_format: "url",
+        n: options.n || 1
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
@@ -41,18 +42,25 @@ const deepseekService = {
 
       return response.data;
     } catch (error) {
-      console.error('DeepSeek API Error:', error.response?.data || error.message);
+      console.error('DeepSeek Enhancement Error:', error.response?.data || error.message);
       throw new Error('Failed to enhance image');
     }
   },
 
-  generateVariations: async (imageUrl, options = {}) => {
+  generateLogo: async (config) => {
     try {
-      const response = await axios.post('https://api.deepseek.com/v1/images/variations', {
-        image: imageUrl,
-        n: options.n || 1,
-        size: options.size || "1024x1024",
-        response_format: "url"
+      const prompt = `Generate a professional ${config.style} logo with text "${config.text}" 
+        in ${config.font} font. Use ${config.color} as main color and ${config.backgroundColor} 
+        as background. Make it ${config.size} in size. Style should be clean and professional.`;
+
+      const response = await axios.post(`${process.env.DEEPSEEK_API_URL}/images/generations`, {
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "url",
+        model: "deepseek-v1",
+        quality: "high",
+        style: "logo"
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
@@ -62,8 +70,8 @@ const deepseekService = {
 
       return response.data;
     } catch (error) {
-      console.error('DeepSeek API Error:', error.response?.data || error.message);
-      throw new Error('Failed to generate variations');
+      console.error('DeepSeek Logo Generation Error:', error.response?.data || error.message);
+      throw new Error('Failed to generate logo');
     }
   }
 };

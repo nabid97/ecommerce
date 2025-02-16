@@ -142,6 +142,49 @@ const orderController = {
       res.status(500).json({ message: 'Error cancelling order' });
     }
   },
+  updatePaymentStatus: async (req, res) => {
+    try {
+      const { paymentStatus } = req.body;
+      const order = await Order.findById(req.params.id);
+  
+      // Validate order existence
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+  
+      // Optional: Add validation for allowed payment statuses
+      const allowedStatuses = ['pending', 'paid', 'failed', 'refunded'];
+      if (!allowedStatuses.includes(paymentStatus)) {
+        return res.status(400).json({ 
+          message: 'Invalid payment status', 
+          allowedStatuses 
+        });
+      }
+  
+      // Update payment status
+      order.paymentStatus = paymentStatus;
+      await order.save();
+  
+      // Optional: Trigger additional actions based on payment status
+      if (paymentStatus === 'paid') {
+        // Example: Release reserved inventory
+        for (const item of order.items) {
+          if (item.type === 'fabric') {
+            const fabric = await Fabric.findById(item.productId);
+            if (fabric) {
+              fabric.stock.reserved -= item.quantity;
+              await fabric.save();
+            }
+          }
+        }
+      }
+  
+      res.json(order);
+    } catch (error) {
+      console.error('Update payment status error:', error);
+      res.status(500).json({ message: 'Error updating payment status' });
+    }
+  },
 
   getOrderStats: async (req, res) => {
     try {

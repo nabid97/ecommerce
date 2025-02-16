@@ -1,8 +1,50 @@
-// jest-dom adds custom jest matchers for asserting on DOM nodes.
 import '@testing-library/jest-dom';
 import 'jest-canvas-mock';
 import { configure } from '@testing-library/react';
 import { server } from './server';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
+
+require('../textEncoder');
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Set test environment
+process.env.NODE_ENV = 'test';
+
+// Ensure MONGO_URI is set for tests
+if (!process.env.MONGO_URI) {
+  process.env.MONGO_URI = 'mongodb://localhost:27017/mydb';
+}
+
+// Database Setup
+beforeAll(async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('Test database connected');
+  } catch (error) {
+    console.error('Test database connection error:', error);
+  }
+});
+
+afterAll(async () => {
+  await mongoose.connection.close();
+});
+
+// Clear test database between tests
+beforeEach(async () => {
+  if (mongoose.connection.readyState === 1) {
+    const collections = await mongoose.connection.db.collections();
+    for (let collection of collections) {
+      await collection.deleteMany({});
+    }
+  }
+});
 
 // Extend expect with custom matchers
 expect.extend({
@@ -83,25 +125,38 @@ jest.setTimeout(10000);
 // Suppress console errors and warnings in tests
 const originalError = console.error;
 const originalWarn = console.warn;
+const originalLog = console.log;
 
 beforeAll(() => {
   console.error = (...args) => {
-    if (args[0]?.includes('Warning: ReactDOM.render is no longer supported')) {
+    if (args[0]?.includes('Warning: ReactDOM.render is no longer supported') ||
+        args[0]?.includes('MongoDB') ||
+        args[0]?.includes('MONGO_URI:')) {
       return;
     }
     originalError.call(console, ...args);
   };
+  
   console.warn = (...args) => {
     if (args[0]?.includes('Warning: React.createFactory()')) {
       return;
     }
     originalWarn.call(console, ...args);
   };
+
+  console.log = (...args) => {
+    if (args[0]?.includes('MongoDB') ||
+        args[0]?.includes('Test database')) {
+      return;
+    }
+    originalLog.call(console, ...args);
+  };
 });
 
 afterAll(() => {
   console.error = originalError;
   console.warn = originalWarn;
+  console.log = originalLog;
 });
 
 // Add custom test environment properties
@@ -131,43 +186,27 @@ jest.mock('./api/deepseekApi', () => ({
   generateImage: jest.fn().mockResolvedValue({
     data: {
       created: Date.now(),
-      data: [
-        {
-          url: 'https://example.com/generated.jpg'
-        }
-      ]
+      data: [{ url: 'https://example.com/generated.jpg' }]
     }
   }),
   enhanceImage: jest.fn().mockResolvedValue({
     data: {
       created: Date.now(),
-      data: [
-        {
-          url: 'https://example.com/enhanced.jpg'
-        }
-      ]
+      data: [{ url: 'https://example.com/enhanced.jpg' }]
     }
   }),
   generateLogo: jest.fn().mockResolvedValue({
     data: {
       created: Date.now(),
-      data: [
-        {
-          url: 'https://example.com/logo.jpg'
-        }
-      ]
+      data: [{ url: 'https://example.com/logo.jpg' }]
     }
   }),
   generateVariations: jest.fn().mockResolvedValue({
     data: {
       created: Date.now(),
       data: [
-        {
-          url: 'https://example.com/variation1.jpg'
-        },
-        {
-          url: 'https://example.com/variation2.jpg'
-        }
+        { url: 'https://example.com/variation1.jpg' },
+        { url: 'https://example.com/variation2.jpg' }
       ]
     }
   }),
