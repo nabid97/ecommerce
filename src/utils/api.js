@@ -1,31 +1,70 @@
 import axios from 'axios';
+import LoggingService from './LoggingService';
+import AppError from './AppError';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000',
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 seconds timeout
 });
 
-// Add request interceptor for authentication
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Request interceptor for adding authentication token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
+    // Log API requests in development
+    LoggingService.debug('API Request', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    });
+
+    return config;
+  },
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
+    LoggingService.error('Request Interceptor Error', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling and logging
+api.interceptors.response.use(
+  (response) => {
+    // Log successful responses in development
+    LoggingService.debug('API Response', {
+      url: response.config.url,
+      method: response.config.method,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    // Comprehensive error handling
+    const processedError = AppError.handleError(error);
+
+    // Special handling for authentication errors
+    if (processedError.status === 401) {
+      // Remove token and redirect to login
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
+
+    // Log the error
+    LoggingService.error('API Error', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: processedError.status,
+      message: processedError.message
+    });
+
+    return Promise.reject(processedError);
   }
 );
 

@@ -1,7 +1,10 @@
-
-import { TextEncoder, TextDecoder } from 'util';
+const { TextEncoder, TextDecoder } = require('util');
+const { ReadableStream, WritableStream, TransformStream } = require('web-streams-polyfill');
 
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
+global.ReadableStream = ReadableStream;
+global.WritableStream = WritableStream;
+global.TransformStream = TransformStream;
 
-export { TextEncoder, TextDecoder };
+module.exports = { TextEncoder, TextDecoder };

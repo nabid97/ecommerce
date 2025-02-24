@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
-import { useFabric } from '../hooks/useFabric';
 import { fabricService } from '../services/fabricService';
+
 
 const Fabric = () => {
   const [selectedFabric, setSelectedFabric] = useState(null);
@@ -20,7 +20,7 @@ const Fabric = () => {
   const [error, setError] = useState(null);
   const [fabrics, setFabrics] = useState([]);
 
-  // Sample fabric data - replace with API call in production
+  // Sample fabric data
   const fabricTypes = [
     {
       id: 'cotton',
@@ -59,6 +59,7 @@ const Fabric = () => {
         setFabrics(response);
         setError(null);
       } catch (err) {
+        console.error('Error fetching fabrics:', err);
         setError('Failed to load fabrics. Please try again later.');
       } finally {
         setLoading(false);
@@ -85,10 +86,7 @@ const Fabric = () => {
   };
 
   const handleConfigChange = (field, value) => {
-    const newConfig = {
-      ...fabricConfig,
-      [field]: value
-    };
+    const newConfig = { ...fabricConfig, [field]: value };
     setFabricConfig(newConfig);
     updateOrderSummary(newConfig);
   };
@@ -137,7 +135,6 @@ const Fabric = () => {
         ...fabricConfig,
         price: orderSummary.totalPrice
       });
-      
       // Show success message or redirect to cart
       alert('Added to cart successfully!');
     } catch (err) {
@@ -147,32 +144,31 @@ const Fabric = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p>Loading fabrics...</p>
+      <div className="flex justify-center items-center h-64" data-testid="loading-state">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <Alert className="m-4">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8" data-testid="fabrics-page">
       <div className="max-w-7xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Fabric Selection</h1>
 
+        {error && (
+          <Alert className="mb-6" data-testid="error-message">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Fabric Selection */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2" data-testid="fabric-grid">
             <div className="grid grid-cols-2 gap-4">
               {fabricTypes.map((fabric) => (
                 <Card 
                   key={fabric.id}
+                  data-testid={`fabric-card-${fabric.id}`}
                   className={`cursor-pointer transition-all ${
                     selectedFabric?.id === fabric.id ? 'ring-2 ring-blue-500' : ''
                   }`}
@@ -183,6 +179,7 @@ const Fabric = () => {
                       src={`/api/placeholder/300/200`} 
                       alt={fabric.name}
                       className="w-full h-40 object-cover rounded-lg mb-4"
+                      data-testid={`fabric-image-${fabric.id}`}
                     />
                     <h3 className="text-xl font-semibold mb-2">{fabric.name}</h3>
                     <p className="text-gray-600 mb-2">{fabric.description}</p>
@@ -203,10 +200,11 @@ const Fabric = () => {
                 <h2 className="text-xl font-semibold mb-6">Customize Your Order</h2>
                 
                 {selectedFabric ? (
-                  <div className="space-y-4">
+                  <div className="space-y-4" data-testid="fabric-config">
                     <div>
                       <label className="block text-sm font-medium mb-1">Color</label>
                       <select
+                        data-testid="color-select"
                         className="w-full p-2 border rounded"
                         value={fabricConfig.color}
                         onChange={(e) => handleConfigChange('color', e.target.value)}
@@ -222,6 +220,7 @@ const Fabric = () => {
                     <div>
                       <label className="block text-sm font-medium mb-1">Style</label>
                       <select
+                        data-testid="style-select"
                         className="w-full p-2 border rounded"
                         value={fabricConfig.style}
                         onChange={(e) => handleConfigChange('style', e.target.value)}
@@ -240,6 +239,7 @@ const Fabric = () => {
                       </label>
                       <input
                         type="number"
+                        data-testid="length-input"
                         min={selectedFabric.minOrder}
                         value={fabricConfig.length}
                         onChange={(e) => handleConfigChange('length', parseInt(e.target.value))}
@@ -253,6 +253,7 @@ const Fabric = () => {
                       </label>
                       <input
                         type="number"
+                        data-testid="quantity-input"
                         min="1"
                         value={fabricConfig.quantity}
                         onChange={(e) => handleConfigChange('quantity', parseInt(e.target.value))}
@@ -269,11 +270,12 @@ const Fabric = () => {
                         accept="image/*"
                         onChange={handleLogoUpload}
                         className="w-full"
+                        data-testid="logo-upload"
                       />
                     </div>
 
                     {orderSummary && (
-                      <div className="mt-6 p-4 bg-gray-50 rounded">
+                      <div className="mt-6 p-4 bg-gray-50 rounded" data-testid="order-summary">
                         <h3 className="font-semibold mb-2">Order Summary</h3>
                         <div className="space-y-2 text-sm">
                           <p>Fabric: {orderSummary.fabric}</p>
@@ -291,13 +293,14 @@ const Fabric = () => {
                     <button
                       onClick={handleAddToCart}
                       className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+                      data-testid="add-to-cart-button"
                     >
                       Add to Cart
                     </button>
                   </div>
                 ) : (
                   <Alert>
-                    <AlertDescription>
+                    <AlertDescription data-testid="select-fabric-message">
                       Please select a fabric type to customize your order.
                     </AlertDescription>
                   </Alert>

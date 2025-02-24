@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from './ui/card/Card';
+import { Alert, AlertDescription } from './ui/alert/Alert';
 import axios from 'axios';
 
 const LogoGenerator = ({ onLogoGenerate }) => {
@@ -16,93 +17,78 @@ const LogoGenerator = ({ onLogoGenerate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to generate prompt for DeepSeek
   const generatePrompt = (config) => {
     return `Generate a professional ${config.style} logo with text "${config.text}" in ${config.font} font. 
     The logo should use ${config.color} as the main color and ${config.backgroundColor} as the background color. 
-    The logo should be ${config.size} in size and suitable for business use.
     Make it minimalistic and modern with clean lines.`;
   };
 
   const handleGenerate = async () => {
+    if (!logoConfig.text.trim()) {
+      setError('Please enter logo text');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
 
-      // DeepSeek API configuration
-      const deepseekConfig = {
-        method: 'post',
-        url: 'https://api.deepseek.com/v1/images/generations',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.REACT_APP_DEEPSEEK_API_KEY}`
-        },
-        data: {
-          prompt: generatePrompt(logoConfig),
-          n: 1, // Number of images to generate
-          size: '1024x1024', // Image size
-          response_format: 'url'
-        }
-      };
+      const response = await axios.post('/api/logos/generate', {
+        prompt: generatePrompt(logoConfig),
+        config: logoConfig
+      });
 
-      // Call DeepSeek API
-      const response = await axios(deepseekConfig);
-
-      if (response.data && response.data.data && response.data.data.length > 0) {
-        const generatedImageUrl = response.data.data[0].url;
-        setGeneratedLogo(generatedImageUrl);
-        onLogoGenerate(generatedImageUrl);
-
-        // Save generated logo to your backend/S3
-        await saveGeneratedLogo(generatedImageUrl);
+      if (response.data?.imageUrl) {
+        setGeneratedLogo(response.data.imageUrl);
+        onLogoGenerate?.(response.data.imageUrl);
       } else {
-        throw new Error('No image was generated');
+        throw new Error('Failed to generate logo');
       }
     } catch (err) {
       console.error('Error generating logo:', err);
-      setError(err.message || 'Error generating logo');
+      setError(err.response?.data?.message || err.message || 'Failed to generate logo');
     } finally {
       setLoading(false);
     }
   };
 
-  // Function to save generated logo to your backend/S3
-  const saveGeneratedLogo = async (imageUrl) => {
-    try {
-      const response = await axios.post('/api/save-logo', {
-        imageUrl,
-        config: logoConfig
-      });
-      return response.data.savedUrl;
-    } catch (err) {
-      console.error('Error saving logo:', err);
-      throw new Error('Failed to save generated logo');
-    }
-  };
-
   return (
-    <Card className="w-full">
+    <Card className="w-full" data-testid="logo-generator">
       <CardContent>
         <div className="p-4">
           <h3 className="text-xl font-semibold mb-4">Logo Generator</h3>
+          
+          {error && (
+            <Alert variant="error" className="mb-4" data-testid="error-message">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Logo Text</label>
+              <label htmlFor="logo-text" className="block text-sm font-medium mb-1">
+                Logo Text
+              </label>
               <input
+                id="logo-text"
                 type="text"
-                placeholder="Enter your logo text"
                 className="w-full p-2 border rounded"
                 value={logoConfig.text}
                 onChange={(e) => setLogoConfig({ ...logoConfig, text: e.target.value })}
+                data-testid="logo-text-input"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Font</label>
+              <label htmlFor="logo-font" className="block text-sm font-medium mb-1">
+                Font
+              </label>
               <select
+                id="logo-font"
                 value={logoConfig.font}
                 onChange={(e) => setLogoConfig({ ...logoConfig, font: e.target.value })}
                 className="w-full p-2 border rounded"
+                data-testid="logo-font-select"
               >
                 <option value="Arial">Arial</option>
                 <option value="Helvetica">Helvetica</option>
@@ -113,31 +99,43 @@ const LogoGenerator = ({ onLogoGenerate }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Text Color</label>
+                <label htmlFor="logo-color" className="block text-sm font-medium mb-1">
+                  Text Color
+                </label>
                 <input
+                  id="logo-color"
                   type="color"
                   value={logoConfig.color}
                   onChange={(e) => setLogoConfig({ ...logoConfig, color: e.target.value })}
                   className="w-full h-10"
+                  data-testid="logo-color-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Background Color</label>
+                <label htmlFor="logo-bg-color" className="block text-sm font-medium mb-1">
+                  Background Color
+                </label>
                 <input
+                  id="logo-bg-color"
                   type="color"
                   value={logoConfig.backgroundColor}
                   onChange={(e) => setLogoConfig({ ...logoConfig, backgroundColor: e.target.value })}
                   className="w-full h-10"
+                  data-testid="logo-background-color-input"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Size</label>
+              <label htmlFor="logo-size" className="block text-sm font-medium mb-1">
+                Size
+              </label>
               <select
+                id="logo-size"
                 value={logoConfig.size}
                 onChange={(e) => setLogoConfig({ ...logoConfig, size: e.target.value })}
                 className="w-full p-2 border rounded"
+                data-testid="logo-size-select"
               >
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
@@ -146,11 +144,15 @@ const LogoGenerator = ({ onLogoGenerate }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Style</label>
+              <label htmlFor="logo-style" className="block text-sm font-medium mb-1">
+                Style
+              </label>
               <select
+                id="logo-style"
                 value={logoConfig.style}
                 onChange={(e) => setLogoConfig({ ...logoConfig, style: e.target.value })}
                 className="w-full p-2 border rounded"
+                data-testid="logo-style-select"
               >
                 <option value="modern">Modern</option>
                 <option value="classic">Classic</option>
@@ -160,10 +162,6 @@ const LogoGenerator = ({ onLogoGenerate }) => {
               </select>
             </div>
 
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-
             {generatedLogo && (
               <div className="mt-4">
                 <label className="block text-sm font-medium mb-2">Preview</label>
@@ -172,6 +170,7 @@ const LogoGenerator = ({ onLogoGenerate }) => {
                     src={generatedLogo} 
                     alt="Generated Logo" 
                     className="max-w-full h-auto"
+                    data-testid="generated-logo"
                   />
                 </div>
               </div>
@@ -179,8 +178,9 @@ const LogoGenerator = ({ onLogoGenerate }) => {
 
             <button
               onClick={handleGenerate}
-              disabled={loading || !logoConfig.text}
+              disabled={loading || !logoConfig.text.trim()}
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              data-testid="generate-logo-button"
             >
               {loading ? (
                 <div className="flex items-center justify-center">

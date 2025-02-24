@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from './ui/card/Card';
-import { fabricApi } from '../api';
+import { Card, CardContent } from '../components/ui/card/Card';
+import { fabricService } from '../services/fabricService';
 
 const ProductGallery = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     type: '',
     color: '',
@@ -22,10 +23,18 @@ const ProductGallery = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fabricApi.getFabrics(filters);
-      setProducts(response.data);
+      setError(null);
+      const response = await fabricService.getFabricTypes(filters);
+      
+      // Ensure we handle both direct array and paginated response
+      const fabricData = Array.isArray(response) 
+        ? response 
+        : response.fabrics || [];
+      
+      setProducts(fabricData);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setError('Failed to fetch products. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -47,6 +56,15 @@ const ProductGallery = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 text-red-600">
+        <h3 className="text-lg font-semibold">Error</h3>
+        <p>{error}</p>
       </div>
     );
   }
@@ -116,14 +134,18 @@ const ProductGallery = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((product) => (
           <Card 
-            key={product.id}
+            key={product._id || product.id}
             className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleProductClick(product.id)}
+            onClick={() => handleProductClick(product._id || product.id)}
           >
             <CardContent>
               <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 mb-4">
                 <img
-                  src={product.images[0]?.url || '/placeholder.png'}
+                  src={
+                    product.images && product.images.length > 0 
+                      ? product.images[0].url 
+                      : '/placeholder.png'
+                  }
                   alt={product.name}
                   className="h-full w-full object-cover object-center"
                 />
@@ -133,16 +155,20 @@ const ProductGallery = () => {
               <div className="mt-2 flex justify-between items-center">
                 <span className="text-lg font-bold">${product.price}</span>
                 <span className="text-sm text-gray-500">
-                  Min. Order: {product.minOrderQuantity}
+                  Min. Order: {product.minOrderQuantity || 50}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {product.colors.map((color) => (
+                {(product.colors || []).map((color) => (
                   <div
-                    key={color.code}
+                    key={color.code || color}
                     className="w-6 h-6 rounded-full border"
-                    style={{ backgroundColor: color.code }}
-                    title={color.name}
+                    style={{ 
+                      backgroundColor: typeof color === 'string' 
+                        ? color 
+                        : color.code 
+                    }}
+                    title={typeof color === 'object' ? color.name : color}
                   ></div>
                 ))}
               </div>
