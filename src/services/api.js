@@ -8,6 +8,7 @@ export const authService = {
       localStorage.setItem('token', token);
       return user;
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   },
@@ -19,12 +20,19 @@ export const authService = {
       localStorage.setItem('token', token);
       return user;
     } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+      localStorage.removeItem('token');
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('token');
+    }
   },
 
   getCurrentUser: async () => {
@@ -32,7 +40,8 @@ export const authService = {
       const response = await api.get('/auth/me');
       return response.data;
     } catch (error) {
+      console.error('Get current user error:', error);
       throw error;
     }
-  },
+  }
 };

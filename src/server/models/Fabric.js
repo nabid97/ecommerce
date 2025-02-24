@@ -1,6 +1,13 @@
+// src/server/models/Fabric.js
 const mongoose = require('mongoose');
 
 const fabricSchema = new mongoose.Schema({
+  // Add a string ID field that can be used for lookups
+  id: {
+    type: String,
+    unique: true,
+    sparse: true  // Allow null/undefined values
+  },
   name: {
     type: String,
     required: true,
@@ -88,7 +95,7 @@ fabricSchema.virtual('availableQuantity').get(function() {
 
 // Method to check if quantity is available
 fabricSchema.methods.isQuantityAvailable = function(requestedQuantity) {
-  return this.availableQuantity >= requestedQuantity;
+  return this.stock.available >= requestedQuantity;
 };
 
 // Method to reserve quantity
@@ -99,6 +106,24 @@ fabricSchema.methods.reserveQuantity = async function(quantity) {
   
   this.stock.reserved += quantity;
   return this.save();
+};
+
+// Static method to find by string ID or ObjectId
+fabricSchema.statics.findByAnyId = async function(id) {
+  // First try as ObjectId
+  try {
+    const byObjectId = await this.findById(id);
+    if (byObjectId) return byObjectId;
+  } catch (err) {
+    // Invalid ObjectId, continue to other lookups
+  }
+  
+  // Then try by string id field
+  const byStringId = await this.findOne({ id: id });
+  if (byStringId) return byStringId;
+  
+  // Finally try by other identifiers
+  return await this.findOne({ $or: [{ code: id }, { 'metadata.sku': id }] });
 };
 
 module.exports = mongoose.model('Fabric', fabricSchema);

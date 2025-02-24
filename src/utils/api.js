@@ -1,30 +1,38 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000',
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,  // Important for CORS
+  timeout: 10000,
 });
 
-// Add request interceptor for authentication
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      data: config.data
+    });
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// Add response interceptor for error handling
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    console.error('API Error:', {
+      message: error.message,
+      response: error.response,
+      request: error.request,
+      config: error.config
+    });
     return Promise.reject(error);
   }
 );

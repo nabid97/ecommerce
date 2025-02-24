@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authApi } from '../api';
+import { authService } from '../services/AuthService';
 
 const AuthContext = createContext(null);
 
@@ -9,72 +9,58 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const userData = await authApi.getCurrentUser();
-        setUser(userData);
+    // Check authentication status on app load
+    const checkAuthStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const userData = await authService.getCurrentUser();
+          setUser(userData);
+        }
+      } catch (err) {
+        // Token might be expired or invalid
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    checkAuthStatus();
+  }, []);
 
   const login = async (credentials) => {
     try {
       setError(null);
-      const response = await authApi.login(credentials);
-      const { token, user: userData } = response;
-      
-      localStorage.setItem('token', token);
+      const userData = await authService.login(credentials);
       setUser(userData);
       return userData;
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed');
       throw err;
     }
   };
 
-  const register = async (userData) => {
+  const register = async (registrationData) => {
     try {
       setError(null);
-      const response = await authApi.register(userData);
-      const { token, user: newUser } = response;
-      
-      localStorage.setItem('token', token);
-      setUser(newUser);
-      return newUser;
+      const userData = await authService.register(registrationData);
+      setUser(userData);
+      return userData;
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      setError(err.response?.data?.message || 'Registration failed');
       throw err;
     }
   };
 
   const logout = async () => {
     try {
-      await authApi.logout();
-      localStorage.removeItem('token');
+      await authService.logout();
       setUser(null);
+      localStorage.removeItem('token');
     } catch (err) {
-      console.error('Logout failed:', err);
-      // Still remove token and user on frontend even if API call fails
-      localStorage.removeItem('token');
-      setUser(null);
+      console.error('Logout failed', err);
     }
-  };
-
-  const updateUser = (userData) => {
-    setUser(prevUser => ({
-      ...prevUser,
-      ...userData
-    }));
   };
 
   const value = {
@@ -84,13 +70,10 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updateUser,
     isAuthenticated: !!user,
+    setUser,
+    setError
   };
-
-  if (loading) {
-    return <div>Loading...</div>; // Or your custom loading component
-  }
 
   return (
     <AuthContext.Provider value={value}>
