@@ -1,4 +1,5 @@
 const Logo = require('../models/Logo');
+<<<<<<< HEAD
 const stabilityService = require('../services/stabilityService');
 const s3Service = require('../services/s3Service');
 const axios = require('axios');
@@ -111,17 +112,79 @@ const logoController = {
   },
 
   // Upload Logo
+=======
+const deepseekService = require('../services/deepseekService');
+const s3Service = require('../services/s3Service');
+
+const logoController = {
+  generateLogo: async (req, res) => {
+    try {
+      const { prompt, config } = req.body;
+
+      // Generate image using DeepSeek
+      const generatedImage = await deepseekService.generateImage(prompt, {
+        size: config.size || "1024x1024",
+        style: config.style || "modern"
+      });
+
+      if (!generatedImage.data || !generatedImage.data[0]?.url) {
+        throw new Error('Failed to generate image');
+      }
+
+      // Download the image and upload to S3
+      const imageUrl = generatedImage.data[0].url;
+      const uploadResult = await s3Service.uploadFile({
+        buffer: Buffer.from(imageUrl),
+        originalname: `${Date.now()}-generated-logo.png`,
+        mimetype: 'image/png'
+      }, 'logos/generated');
+
+      // Create logo record
+      const logo = new Logo({
+        userId: req.user._id,
+        imageUrl: uploadResult.url,
+        s3Key: uploadResult.key,
+        config,
+        prompt,
+        type: 'generated',
+        status: 'completed'
+      });
+
+      await logo.save();
+
+      res.json({
+        logo,
+        imageUrl: uploadResult.url
+      });
+    } catch (error) {
+      console.error('Logo generation error:', error);
+      res.status(500).json({ message: 'Error generating logo' });
+    }
+  },
+
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
   uploadLogo: async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
       }
 
+<<<<<<< HEAD
       // Upload to S3 or local storage
       const uploadResult = await s3Service.uploadFile(req.file, 'logos/uploaded');
 
       const logo = new Logo({
         imageUrl: uploadResult.url,
+=======
+      // Upload to S3
+      const uploadResult = await s3Service.uploadFile(req.file, 'logos/uploaded');
+
+      // Create logo record
+      const logo = new Logo({
+        userId: req.user._id,
+        imageUrl: uploadResult.url,
+        s3Key: uploadResult.key,
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
         type: 'uploaded',
         status: 'completed',
         metadata: {
@@ -133,6 +196,7 @@ const logoController = {
 
       await logo.save();
 
+<<<<<<< HEAD
       res.status(200).json({ 
         message: 'Logo uploaded successfully', 
         logo: uploadResult 
@@ -165,10 +229,30 @@ const logoController = {
     try {
       const logo = await Logo.findById(req.params.id);
       
+=======
+      res.json({
+        logo,
+        imageUrl: uploadResult.url
+      });
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      res.status(500).json({ message: 'Error uploading logo' });
+    }
+  },
+
+  getLogo: async (req, res) => {
+    try {
+      const logo = await Logo.findOne({
+        _id: req.params.id,
+        userId: req.user._id
+      });
+
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       if (!logo) {
         return res.status(404).json({ message: 'Logo not found' });
       }
 
+<<<<<<< HEAD
       res.status(200).json(logo);
     } catch (error) {
       console.error('Get logo error:', error);
@@ -213,10 +297,40 @@ const logoController = {
     try {
       const logo = await Logo.findByIdAndDelete(req.params.id);
       
+=======
+      res.json(logo);
+    } catch (error) {
+      console.error('Get logo error:', error);
+      res.status(500).json({ message: 'Error retrieving logo' });
+    }
+  },
+
+  getUserLogos: async (req, res) => {
+    try {
+      const logos = await Logo.find({
+        userId: req.user._id
+      }).sort({ createdAt: -1 });
+
+      res.json(logos);
+    } catch (error) {
+      console.error('Get user logos error:', error);
+      res.status(500).json({ message: 'Error retrieving logos' });
+    }
+  },
+
+  deleteLogo: async (req, res) => {
+    try {
+      const logo = await Logo.findOne({
+        _id: req.params.id,
+        userId: req.user._id
+      });
+
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       if (!logo) {
         return res.status(404).json({ message: 'Logo not found' });
       }
 
+<<<<<<< HEAD
       // Delete from S3 if applicable
       if (logo.s3Key) {
         await s3Service.deleteFile(logo.s3Key);
@@ -232,6 +346,41 @@ const logoController = {
         message: 'Error deleting logo',
         error: error.message 
       });
+=======
+      // Delete from S3
+      await s3Service.deleteFile(logo.s3Key);
+
+      // Delete from database
+      await logo.remove();
+
+      res.json({ message: 'Logo deleted successfully' });
+    } catch (error) {
+      console.error('Delete logo error:', error);
+      res.status(500).json({ message: 'Error deleting logo' });
+    }
+  },
+
+  updateLogo: async (req, res) => {
+    try {
+      const { config } = req.body;
+
+      const logo = await Logo.findOne({
+        _id: req.params.id,
+        userId: req.user._id
+      });
+
+      if (!logo) {
+        return res.status(404).json({ message: 'Logo not found' });
+      }
+
+      logo.config = { ...logo.config, ...config };
+      await logo.save();
+
+      res.json(logo);
+    } catch (error) {
+      console.error('Update logo error:', error);
+      res.status(500).json({ message: 'Error updating logo' });
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     }
   }
 };

@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { fabricService } from '../services/fabricService';
 import { useCart } from '../contexts/CartContext'; // Import useCart hook
 
+
 const Fabric = () => {
   // Get cart functions from context
   const { addToCart } = useCart();
@@ -144,6 +145,7 @@ const Fabric = () => {
         ...fabricConfig,
         price: orderSummary.totalPrice || 0
       });
+<<<<<<< HEAD
       
       console.log('Order created:', orderResponse);
       
@@ -171,6 +173,10 @@ const Fabric = () => {
       // Optional: Reset the form or keep the current selection
       // setSelectedFabric(null);
       // setFabricConfig({ type: '', color: '', length: 1, style: '', quantity: 1, logo: null });
+=======
+      // Show success message or redirect to cart
+      alert('Added to cart successfully!');
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     } catch (err) {
       console.error('Error placing order:', err);
       setError('Failed to add to cart. Please try again.');
@@ -195,12 +201,15 @@ const Fabric = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+<<<<<<< HEAD
         
         {success && (
           <Alert className="mb-6 bg-green-50 text-green-900">
             <AlertDescription data-testid="success-message">{success}</AlertDescription>
           </Alert>
         )}
+=======
+>>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Fabric Selection */}
