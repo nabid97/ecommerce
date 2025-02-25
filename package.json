@@ -9,23 +9,15 @@
     "@stripe/react-stripe-js": "^3.1.1",
     "@stripe/stripe-js": "^5.7.0",
     "aws-sdk": "^2.1692.0",
-<<<<<<< HEAD
     "axios": "^1.7.9",
     "bcryptjs": "^3.0.2",
     "canvas": "^2.11.2",
     "compression": "^1.8.0",
-=======
-    "axios": "^1.6.2",
-    "bcryptjs": "^3.0.2",
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     "cors": "^2.8.5",
     "curl": "^0.1.4",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-<<<<<<< HEAD
     "formdata-node": "^6.0.3",
-=======
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.13.0",

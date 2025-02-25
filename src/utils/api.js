@@ -7,36 +7,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-<<<<<<< HEAD
-  withCredentials: true,  // Important for CORS
-  timeout: 10000,
-});
-
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    console.log('API Request:', {
-      url: config.url,
-      method: config.method,
-      baseURL: config.baseURL,
-      data: config.data
-    });
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', {
-      message: error.message,
-      response: error.response,
-      request: error.request,
-      config: error.config
-    });
-=======
   timeout: 10000, // 10 seconds timeout
 });
 
@@ -59,7 +29,6 @@ api.interceptors.request.use(
   },
   (error) => {
     LoggingService.error('Request Interceptor Error', error);
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     return Promise.reject(error);
   }
 );

@@ -4,10 +4,7 @@ const Fabric = require('../models/Fabric');
 // Sample data for development
 const sampleFabrics = [
   {
-<<<<<<< HEAD
     id: 'cotton',
-=======
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     name: 'Cotton',
     description: 'Soft, breathable natural fabric',
     type: 'cotton',
@@ -25,10 +22,7 @@ const sampleFabrics = [
     status: 'active'
   },
   {
-<<<<<<< HEAD
     id: 'polyester',
-=======
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
     name: 'Polyester',
     description: 'Durable synthetic fabric',
     type: 'polyester',
@@ -81,7 +75,6 @@ const fabricController = {
   // Get fabric by ID
   getFabricById: async (req, res) => {
     try {
-<<<<<<< HEAD
       // First try to find by MongoDB ObjectId
       let fabric;
       try {
@@ -95,9 +88,6 @@ const fabricController = {
       if (!fabric) {
         fabric = sampleFabrics.find(f => f.id === req.params.id);
       }
-=======
-      const fabric = await Fabric.findById(req.params.id);
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       
       if (!fabric) {
         return res.status(404).json({ message: 'Fabric not found' });
@@ -117,7 +107,6 @@ const fabricController = {
   checkAvailability: async (req, res) => {
     try {
       const { fabricId, quantity } = req.query;
-<<<<<<< HEAD
       
       // First try to find by ObjectId, then by other identifiers
       let fabric;
@@ -145,31 +134,20 @@ const fabricController = {
           });
         }
       }
-=======
-      const fabric = await Fabric.findById(fabricId);
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
 
       if (!fabric) {
         return res.status(404).json({ message: 'Fabric not found' });
       }
 
-<<<<<<< HEAD
       // For database fabrics with isQuantityAvailable method
       const isAvailable = fabric.isQuantityAvailable 
         ? fabric.isQuantityAvailable(Number(quantity))
         : (fabric.stock.available >= Number(quantity));
-=======
-      const isAvailable = fabric.isQuantityAvailable(Number(quantity));
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       
       res.status(200).json({
         fabricId,
         isAvailable,
-<<<<<<< HEAD
         availableQuantity: fabric.availableQuantity || fabric.stock.available - fabric.stock.reserved,
-=======
-        availableQuantity: fabric.availableQuantity,
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
         requestedQuantity: Number(quantity)
       });
     } catch (error) {
@@ -185,7 +163,6 @@ const fabricController = {
   getPricing: async (req, res) => {
     try {
       const { length, quantity } = req.query;
-<<<<<<< HEAD
       
       // Get fabric by id, handling both ObjectId and string ids
       let fabric;
@@ -199,9 +176,6 @@ const fabricController = {
       if (!fabric) {
         fabric = sampleFabrics.find(f => f.id === req.params.id);
       }
-=======
-      const fabric = await Fabric.findById(req.params.id);
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
 
       if (!fabric) {
         return res.status(404).json({ message: 'Fabric not found' });
@@ -229,7 +203,6 @@ const fabricController = {
   createOrder: async (req, res) => {
     try {
       const { fabricId, quantity, length } = req.body;
-<<<<<<< HEAD
       console.log('Creating order for fabric:', fabricId);
       
       // Find fabric, handling both ObjectId and string ids
@@ -268,31 +241,14 @@ const fabricController = {
       // Calculate total price
       const total = fabric.price * quantity * (length || 1);
 
-=======
-      const fabric = await Fabric.findById(fabricId);
-
-      if (!fabric) {
-        return res.status(404).json({ message: 'Fabric not found' });
-      }
-
-      if (!fabric.isQuantityAvailable(quantity)) {
-        return res.status(400).json({ message: 'Insufficient quantity available' });
-      }
-
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       // In a real application, you would create an order in the database here
       res.status(201).json({
         message: 'Order created successfully',
         orderId: Date.now().toString(),
         fabric: fabric.name,
         quantity,
-<<<<<<< HEAD
         length: length || 1,
         total
-=======
-        length,
-        total: fabric.price * quantity * length
->>>>>>> 0debe13269b25c54fb4fa8cde1294e72ff73f8eb
       });
     } catch (error) {
       console.error('Error in createOrder:', error);
