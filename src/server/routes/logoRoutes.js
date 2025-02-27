@@ -29,5 +29,6 @@ router.get('/', logoController.getUserLogos);
 router.get('/:id', logoController.getLogo);
 router.delete('/:id', logoController.deleteLogo);
 router.put('/:id', logoController.updateLogo);
+router.post('/visualize-clothing', logoController.generateClothingVisualization);
 
 module.exports = router;

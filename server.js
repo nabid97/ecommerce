@@ -48,6 +48,10 @@ const fabricRoutes = require(path.join(__dirname, 'src/server/routes/fabricRoute
 const authRoutes = require(path.join(__dirname, 'src/server/routes/authRoutes'));
 const logoRoutes = require(path.join(__dirname, 'src/server/routes/logoRoutes'));
 const orderRoutes = require(path.join(__dirname, 'src/server/routes/orderRoutes'));
+app.use('/assets', express.static(path.join(__dirname, 'src', 'assets')));
+app.use('/fabric-images', express.static(path.join(__dirname, 'src', 'assets', 'fabricimages')));
+console.log('Serving fabric images from:', path.join(__dirname, 'src', 'assets', 'fabricimages'));
+const clothingRoutes = require(path.join(__dirname, 'src/server/routes/clothingRoutes'));
 
 // Detailed request logging middleware
 app.use((req, res, next) => {
@@ -130,6 +134,7 @@ app.use('/api/fabrics', fabricRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/logos', logoRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/clothing', clothingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

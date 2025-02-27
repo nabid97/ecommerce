@@ -26,35 +26,55 @@ const Fabric = () => {
   const [fabrics, setFabrics] = useState([]);
 
   // Sample fabric data
-  const fabricTypes = [
-    {
-      id: 'cotton',
-      name: 'Cotton',
-      description: 'Soft, breathable natural fabric',
-      minOrder: 50,
-      price: 5.99,
-      colors: ['white', 'black', 'navy', 'grey'],
-      styles: ['plain', 'twill', 'jersey']
-    },
-    {
-      id: 'polyester',
-      name: 'Polyester',
-      description: 'Durable synthetic fabric',
-      minOrder: 100,
-      price: 4.99,
-      colors: ['white', 'black', 'red', 'blue'],
-      styles: ['plain', 'satin', 'textured']
-    },
-    {
-      id: 'linen',
-      name: 'Linen',
-      description: 'Light, natural fabric',
-      minOrder: 30,
-      price: 8.99,
-      colors: ['white', 'beige', 'grey'],
-      styles: ['plain', 'textured']
-    }
-  ];
+  // Update the fabricTypes array in your Fabric.js component to include the new fabrics:
+
+const fabricTypes = [
+  {
+    id: 'cotton',
+    name: 'Cotton',
+    description: 'Soft, breathable natural fabric',
+    minOrder: 50,
+    price: 5.99,
+    colors: ['white', 'black', 'navy', 'grey'],
+    styles: ['plain', 'twill', 'jersey']
+  },
+  {
+    id: 'polyester',
+    name: 'Polyester',
+    description: 'Durable synthetic fabric',
+    minOrder: 100,
+    price: 4.99,
+    colors: ['white', 'black', 'red', 'blue'],
+    styles: ['plain', 'satin', 'textured']
+  },
+  {
+    id: 'linen',
+    name: 'Linen',
+    description: 'Light, natural fabric',
+    minOrder: 30,
+    price: 8.99,
+    colors: ['white', 'beige', 'grey'],
+    styles: ['plain', 'textured']
+  },
+  {
+    id: 'silk',
+    name: 'Silk',
+    description: 'Luxurious, smooth natural fabric',
+    minOrder: 20,
+    price: 15.99,
+    colors: ['white', 'cream', 'black', 'red'],
+    styles: ['plain', 'charmeuse', 'satin', 'chiffon']
+  },
+  {
+    id: 'wool',
+    name: 'Wool',
+    description: 'Warm, insulating natural fabric',
+    minOrder: 25,
+    price: 12.99,
+    colors: ['grey', 'brown', 'navy', 'charcoal'],
+    styles: ['plain', 'tweed', 'flannel', 'melton']
+  }
+];
 
   useEffect(() => {
     const fetchFabrics = async () => {
@@ -211,35 +231,42 @@ const Fabric = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Fabric Selection */}
-          <div className="md:col-span-2" data-testid="fabric-grid">
-            <div className="grid grid-cols-2 gap-4">
-              {fabricTypes.map((fabric) => (
-                <Card 
-                  key={fabric.id}
-                  data-testid={`fabric-card-${fabric.id}`}
-                  className={`cursor-pointer transition-all ${
-                    selectedFabric?.id === fabric.id ? 'ring-2 ring-blue-500' : ''
-                  }`}
-                  onClick={() => handleFabricSelect(fabric)}
-                >
-                  <CardContent className="p-4">
-                    <img 
-                      src={`/api/placeholder/300/200`} 
-                      alt={fabric.name}
-                      className="w-full h-40 object-cover rounded-lg mb-4"
-                      data-testid={`fabric-image-${fabric.id}`}
-                    />
-                    <h3 className="text-xl font-semibold mb-2">{fabric.name}</h3>
-                    <p className="text-gray-600 mb-2">{fabric.description}</p>
-                    <p className="text-sm text-gray-500">
-                      Min. order: {fabric.minOrder} meters
-                    </p>
-                    <p className="font-semibold">${fabric.price}/meter</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+       
+<div className="md:col-span-2" data-testid="fabric-grid">
+  <div className="grid grid-cols-2 gap-4">
+    {fabricTypes.map((fabric) => (
+      <Card 
+        key={fabric.id}
+        data-testid={`fabric-card-${fabric.id}`}
+        className={`cursor-pointer transition-all ${
+          selectedFabric?.id === fabric.id ? 'ring-2 ring-blue-500' : ''
+        }`}
+        onClick={() => handleFabricSelect(fabric)}
+      >
+        <CardContent className="p-4">
+          {/* Try multiple image paths, prioritizing ones from the API */}
+
+<img 
+  src={`/fabric-images/${fabric.id.charAt(0).toUpperCase() + fabric.id.slice(1)}.jpg`}
+  alt={fabric.name}
+  className="w-full h-40 object-cover rounded-lg mb-4"
+  data-testid={`fabric-image-${fabric.id}`}
+  onError={(e) => {
+    console.log(`Failed to load image: ${e.target.src}`);
+    e.target.src = `/api/placeholder/300/200?text=${fabric.name}`;
+  }}
+/>
+          <h3 className="text-xl font-semibold mb-2">{fabric.name}</h3>
+          <p className="text-gray-600 mb-2">{fabric.description}</p>
+          <p className="text-sm text-gray-500">
+            Min. order: {fabric.minOrder} meters
+          </p>
+          <p className="font-semibold">${fabric.price}/meter</p>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+</div>
 
           {/* Configuration Panel */}
           <div className="md:col-span-1">

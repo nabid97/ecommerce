@@ -280,7 +280,95 @@ const logoController = {
       });
     }
   },
-
+  // Generate clothing visualization
+  generateClothingVisualization: async (req, res) => {
+    try {
+      console.log('\n====== CLOTHING VISUALIZATION REQUEST ======');
+      console.log('Request Body:', JSON.stringify(req.body, null, 2));
+      
+      const { prompt, config } = req.body;
+      
+      // Validate request
+      if (!config || !config.clothingType) {
+        return res.status(400).json({ 
+          message: 'Clothing configuration is required',
+          receivedBody: req.body 
+        });
+      }
+  
+      // Use the same logic/service as your existing generateLogo method
+      // This allows you to leverage your existing Stability AI integration
+      
+      // Simply pass the clothing-specific prompt to your existing image generation service
+      // For example, if your logoController has a generateImage method or uses a service:
+      try {
+        // If you have an existing image generation service
+        // const generatedImage = await yourImageGenerationService.generateImage(prompt);
+        
+        // For demonstration purposes, we'll use the same process as logo generation
+        // but with the clothing-specific prompt
+        const response = await axios.post('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+          text_prompts: [
+            {
+              text: prompt,
+              weight: 1
+            }
+          ],
+          cfg_scale: 7,
+          height: 1024,
+          width: 1024,
+          samples: 1,
+          steps: 30
+        }, {
+          headers: { 
+            'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+  
+        // Process the response based on your existing pattern
+        const imageUrl = response.data.artifacts[0].base64;
+        const dataUrl = `data:image/png;base64,${imageUrl}`;
+  
+        return res.status(200).json({
+          imageUrl: dataUrl,
+          message: 'Clothing visualization generated successfully',
+          config: config
+        });
+  
+      } catch (stabilityError) {
+        console.error('Image Generation Error:', {
+          message: stabilityError.message,
+          stack: stabilityError.stack
+        });
+  
+        // Fallback to placeholder if API fails
+        const placeholder = `https://via.placeholder.com/800x600/f5f5f5/333333?text=${encodeURIComponent(`${config.color} ${config.clothingType}`)}`;
+        
+        return res.status(200).json({
+          imageUrl: placeholder,
+          message: 'Using placeholder - Stability AI API error',
+          error: stabilityError.message
+        });
+      }
+  
+    } catch (error) {
+      console.error('Clothing Visualization Error:', {
+        message: error.message,
+        stack: error.stack
+      });
+  
+      // Provide a fallback image even in case of errors
+      const fallbackImage = `https://via.placeholder.com/800x600/f5f5f5/333333?text=Visualization%20Failed`;
+      
+      res.status(200).json({ 
+        imageUrl: fallbackImage,
+        message: 'Error occurred, using fallback image',
+        error: error.message
+      });
+    }
+  },
   // Test endpoint that directly tries multiple approaches
   testStabilityDirect: async (req, res) => {
     try {

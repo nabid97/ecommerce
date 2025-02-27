@@ -19,7 +19,14 @@ const sampleFabrics = [
       reserved: 0,
       reorderPoint: 200
     },
-    status: 'active'
+    status: 'active',
+    images: [
+      { 
+        url: '/fabric-images/Cotton.jpg',
+        alt: 'Cotton fabric',
+        isPrimary: true
+      }
+    ]
   },
   {
     id: 'polyester',
@@ -37,9 +44,15 @@ const sampleFabrics = [
       reserved: 0,
       reorderPoint: 300
     },
-    status: 'active'
+    status: 'active',
+    images: [
+      { 
+        url: '/fabric-images/Polyester.jpg',
+        alt: 'Polyester fabric',
+        isPrimary: true
+      }
+    ]
   },
-  // Added missing 'linen' fabric to match client-side data
   {
     id: 'linen',
     name: 'Linen',
@@ -57,7 +70,70 @@ const sampleFabrics = [
       reserved: 0,
       reorderPoint: 150
     },
-    status: 'active'
+    status: 'active',
+    images: [
+      { 
+        url: '/fabric-images/Linen.jpg',
+        alt: 'Linen fabric',
+        isPrimary: true
+      }
+    ]
+  },
+  // New Silk fabric
+  {
+    id: 'silk',
+    name: 'Silk',
+    description: 'Luxurious, smooth natural fabric',
+    type: 'silk',
+    colors: [
+      { name: 'White', code: '#FFFFFF', inStock: true },
+      { name: 'Cream', code: '#FFF8DC', inStock: true },
+      { name: 'Black', code: '#000000', inStock: true },
+      { name: 'Red', code: '#B22222', inStock: true }
+    ],
+    price: 15.99,
+    minOrderQuantity: 20,
+    stock: {
+      available: 500,
+      reserved: 0,
+      reorderPoint: 100
+    },
+    status: 'active',
+    images: [
+      { 
+        url: '/fabric-images/Silk.jpg',
+        alt: 'Silk fabric',
+        isPrimary: true
+      }
+    ]
+  },
+  // New Wool fabric
+  {
+    id: 'wool',
+    name: 'Wool',
+    description: 'Warm, insulating natural fabric',
+    type: 'wool',
+    colors: [
+      { name: 'Grey', code: '#808080', inStock: true },
+      { name: 'Brown', code: '#8B4513', inStock: true },
+      { name: 'Navy', code: '#000080', inStock: true },
+      { name: 'Charcoal', code: '#36454F', inStock: true }
+    ],
+    price: 12.99,
+    minOrderQuantity: 25,
+    stock: {
+      available: 700,
+      reserved: 0,
+      reorderPoint: 150
+    },
+    status: 'active',
+    images: [
+      { 
+        url: '/fabric-images/Wool.jpg',
+        alt: 'Wool fabric',
+        isPrimary: true
+      }
+    ]
   }
 ];
 
@@ -95,18 +171,27 @@ const fabricController = {
   // Get fabric by ID
   getFabricById: async (req, res) => {
     try {
+      const fabricId = req.params.id;
+      console.log(`Looking for fabric with ID: ${fabricId}`);
+      
       // First try to find by MongoDB ObjectId
       let fabric;
       try {
-        fabric = await Fabric.findById(req.params.id);
+        fabric = await Fabric.findById(fabricId);
       } catch (err) {
         // If not found, fallback to find by an 'id' field or code field
-        fabric = await Fabric.findOne({ $or: [{ id: req.params.id }, { code: req.params.id }] });
+        try {
+          fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        } catch (mongoError) {
+          console.log('MongoDB error, will check sample data:', mongoError);
+        }
       }
       
       // If still not found, check sample data
       if (!fabric) {
-        fabric = sampleFabrics.find(f => f.id === req.params.id);
+        console.log('Fabric not found in DB, checking sample data');
+        fabric = sampleFabrics.find(f => f.id.toLowerCase() === fabricId.toLowerCase());
+        console.log('Sample data search result:', fabric ? `Found: ${fabric.name}` : 'Not found');
       }
       
       if (!fabric) {
@@ -127,6 +212,7 @@ const fabricController = {
   checkAvailability: async (req, res) => {
     try {
       const { fabricId, quantity } = req.query;
+      console.log(`Checking availability for fabric ID: ${fabricId}, quantity: ${quantity}`);
       
       // First try to find by ObjectId, then by other identifiers
       let fabric;
@@ -134,12 +220,18 @@ const fabricController = {
         fabric = await Fabric.findById(fabricId);
       } catch (err) {
         // If error occurred (invalid ObjectId), try to find by other fields
-        fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        try {
+          fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        } catch (mongoError) {
+          console.log('MongoDB error, will check sample data:', mongoError);
+        }
       }
       
       // If not in database, check sample data
       if (!fabric) {
-        fabric = sampleFabrics.find(f => f.id === fabricId);
+        console.log('Fabric not found in DB, checking sample data');
+        fabric = sampleFabrics.find(f => f.id.toLowerCase() === fabricId.toLowerCase());
+        console.log('Sample data search result:', fabric ? `Found: ${fabric.name}` : 'Not found');
         
         // Mock the availability check for sample data
         if (fabric) {
@@ -182,19 +274,27 @@ const fabricController = {
   // Get fabric pricing
   getPricing: async (req, res) => {
     try {
+      const fabricId = req.params.id;
       const { length, quantity } = req.query;
+      console.log(`Getting pricing for fabric ID: ${fabricId}, length: ${length}, quantity: ${quantity}`);
       
       // Get fabric by id, handling both ObjectId and string ids
       let fabric;
       try {
-        fabric = await Fabric.findById(req.params.id);
+        fabric = await Fabric.findById(fabricId);
       } catch (err) {
-        fabric = await Fabric.findOne({ $or: [{ id: req.params.id }, { code: req.params.id }] });
+        try {
+          fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        } catch (mongoError) {
+          console.log('MongoDB error, will check sample data:', mongoError);
+        }
       }
       
       // If not in database, check sample data
       if (!fabric) {
-        fabric = sampleFabrics.find(f => f.id === req.params.id);
+        console.log('Fabric not found in DB, checking sample data');
+        fabric = sampleFabrics.find(f => f.id.toLowerCase() === fabricId.toLowerCase());
+        console.log('Sample data search result:', fabric ? `Found: ${fabric.name}` : 'Not found');
       }
 
       if (!fabric) {
@@ -235,17 +335,23 @@ const fabricController = {
       } catch (err) {
         console.log('Not a valid ObjectId, trying string ID lookup');
         // If that fails (invalid ObjectId), try by string id
-        fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        try {
+          fabric = await Fabric.findOne({ $or: [{ id: fabricId }, { code: fabricId }] });
+        } catch (mongoError) {
+          console.log('MongoDB error, will check sample data:', mongoError);
+        }
       }
       
-      // If not in database, check sample data
+      // If not in database, check sample data - case-insensitive comparison
       if (!fabric) {
         console.log('Fabric not found in database, checking sample data');
-        fabric = sampleFabrics.find(f => f.id === fabricId);
+        fabric = sampleFabrics.find(f => f.id.toLowerCase() === fabricId.toLowerCase());
+        console.log('Sample data search result:', fabric ? `Found: ${fabric.name}` : 'Not found');
       }
 
       if (!fabric) {
         console.log('Fabric not found:', fabricId);
+        console.log('Available fabrics:', sampleFabrics.map(f => f.id));
         return res.status(404).json({ message: 'Fabric not found' });
       }
 
