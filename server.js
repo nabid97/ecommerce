@@ -7,6 +7,30 @@ const compression = require('compression');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51Qw9JaJkWEUWirtQd3lx62XDRkZOivj3FTdIPOt4OpQ8iBKJoN89HlKsFn5sKsXIxoJCRFym2Ar2qbB36dlwNs7G00DThz6401');
 require('dotenv').config();
 
+// Environment variables check
+console.log('\n====== ENVIRONMENT VARIABLES CHECK ======');
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+console.log(`PORT: ${process.env.PORT || 'not set'}`);
+
+// Check Stability API key without revealing the full key
+if (process.env.STABILITY_API_KEY) {
+  const key = process.env.STABILITY_API_KEY;
+  console.log(`STABILITY_API_KEY: ${key.substring(0, 5)}...${key.substring(key.length - 3)}`);
+} else {
+  console.log('STABILITY_API_KEY: not set - This is required for logo generation!');
+}
+
+// Other environment variables if needed
+console.log(`AWS_S3_BUCKET: ${process.env.AWS_S3_BUCKET || 'not set'}`);
+console.log('====== END OF ENV CHECK ======\n');
+
+// Additional package check
+try {
+  const FormData = require('form-data');
+  console.log('✓ form-data package is installed');
+} catch (err) {
+  console.error('✗ form-data package is missing. Install it with: npm install form-data --save');
+}
 // Log Stripe configuration
 console.log('STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY 
   ? 'Key is present (starts with: ' + process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...)' 

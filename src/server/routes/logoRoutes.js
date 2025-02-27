@@ -1,3 +1,4 @@
+// src/server/routes/logoRoutes.js
 const express = require('express');
 const router = express.Router();
 const logoController = require('../controllers/logoController');
@@ -15,13 +16,14 @@ router.use((req, res, next) => {
   next();
 });
 
-// Generate logo route (remove authentication for debugging)
-router.post('/generate', (req, res) => {
-  console.log('Logo Generation Endpoint Reached');
-  logoController.generateLogo(req, res);
-});
+// Test routes for debugging
+router.get('/test', logoController.generateLogoTest);
+router.get('/test-direct', logoController.testStabilityDirect);
 
-// Other routes without authentication for now
+// Generate logo route
+router.post('/generate', logoController.generateLogo);
+
+// Other routes
 router.post('/upload', logoController.uploadLogo);
 router.get('/', logoController.getUserLogos);
 router.get('/:id', logoController.getLogo);

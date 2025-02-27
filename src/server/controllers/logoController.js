@@ -1,18 +1,29 @@
+// src/server/controllers/logoController.js
 const Logo = require('../models/Logo');
 const stabilityService = require('../services/stabilityService');
 const s3Service = require('../services/s3Service');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const FormData = require('form-data');
 
 const logoController = {
   // Create Logo (Generate)
   generateLogo: async (req, res) => {
     try {
-      console.log('Full Logo Generation Request:', {
-        body: req.body,
-        headers: req.headers
-      });
+      console.log('\n====== LOGO GENERATION REQUEST ======');
+      console.log('Request Body:', JSON.stringify(req.body, null, 2));
+      
+      // Debug environment variables
+      console.log('Environment Variables:');
+      if (process.env.STABILITY_API_KEY) {
+        const key = process.env.STABILITY_API_KEY;
+        console.log(`STABILITY_API_KEY: ${key.substring(0, 5)}...${key.substring(key.length - 3)}`);
+      } else {
+        console.log('STABILITY_API_KEY: not set');
+      }
 
-      const { config } = req.body;
+      const { prompt, config } = req.body;
 
       // Validate input
       if (!config || !config.text) {
@@ -23,14 +34,14 @@ const logoController = {
       }
 
       // Construct detailed prompt for logo generation
-      const logoPrompt = `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
+      const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
         in ${config.font || 'Arial'} font style. 
         Main color ${config.color || '#000000'}, 
         background color ${config.backgroundColor || '#FFFFFF'}. 
         Clean, minimalist, business-appropriate logo. 
         High resolution, vector-style graphic.`;
 
-      console.log('Stability AI Logo Generation Prompt:', logoPrompt);
+      console.log('Logo Generation Prompt:', logoPrompt);
 
       try {
         // Generate logo using Stability AI
@@ -38,74 +49,321 @@ const logoController = {
           size: "1024x1024"
         });
 
-        console.log('Stability AI Generation Response:', generatedImage);
+        console.log('Generation Response:', {
+          hasData: !!generatedImage.data,
+          dataLength: generatedImage.data?.length,
+          hasUrl: !!generatedImage.data?.[0]?.url,
+          urlStart: generatedImage.data?.[0]?.url?.substring(0, 30) + '...' // Just log the start of the URL
+        });
 
         // Validate image generation
         if (!generatedImage.data || !generatedImage.data[0]?.url) {
-          console.error('Invalid Stability AI response:', generatedImage);
+          console.error('Invalid response:', generatedImage);
           return res.status(500).json({ 
             message: 'Failed to generate logo',
-            details: generatedImage 
+            details: 'Invalid response from image generation service'
           });
         }
 
-        // Download image using axios
-        const imageResponse = await axios.get(generatedImage.data[0].url, { 
-          responseType: 'arraybuffer' 
-        });
+        let imageUrl = generatedImage.data[0].url;
+        let logoData;
+        
+        // Handle base64 data URLs
+        if (imageUrl.startsWith('data:image')) {
+          console.log('Image is base64, using directly');
+          logoData = {
+            imageUrl: imageUrl,
+            s3Key: null // No S3 key for base64 data
+          };
+        } else {
+          try {
+            // Download image using axios
+            const imageResponse = await axios.get(imageUrl, { 
+              responseType: 'arraybuffer' 
+            });
 
-        // Upload to S3
-        const uploadResult = await s3Service.uploadFile({
-          buffer: Buffer.from(imageResponse.data),
-          originalname: `logo-${Date.now()}.png`,
-          mimetype: 'image/png'
-        }, 'logos/generated');
+            // Upload to S3 if configured
+            if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+              const uploadResult = await s3Service.uploadFile({
+                buffer: Buffer.from(imageResponse.data),
+                originalname: `logo-${Date.now()}.png`,
+                mimetype: 'image/png'
+              }, 'logos/generated');
 
-        // Create logo record in database
-        const logo = new Logo({
-          imageUrl: uploadResult.url,
-          s3Key: uploadResult.key,
-          config: config,
-          prompt: logoPrompt,
-          type: 'generated',
-          status: 'completed'
-        });
+              logoData = {
+                imageUrl: uploadResult.url,
+                s3Key: uploadResult.key
+              };
+            } else {
+              // Save locally if S3 is not configured
+              const uploadsDir = path.join(__dirname, '../../uploads/logos');
+              if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true });
+              }
+              
+              const filename = `logo-${Date.now()}.png`;
+              const filePath = path.join(uploadsDir, filename);
+              fs.writeFileSync(filePath, Buffer.from(imageResponse.data));
+              
+              logoData = {
+                imageUrl: `/uploads/logos/${filename}`,
+                s3Key: null
+              };
+            }
+          } catch (downloadError) {
+            console.error('Error downloading/saving image:', downloadError);
+            
+            // Still use the direct URL if download/upload failed
+            logoData = {
+              imageUrl: imageUrl,
+              s3Key: null
+            };
+          }
+        }
 
-        await logo.save();
+        // Save to database if possible
+        try {
+          const logo = new Logo({
+            imageUrl: logoData.imageUrl,
+            s3Key: logoData.s3Key,
+            config: config,
+            prompt: logoPrompt,
+            type: 'generated',
+            status: 'completed',
+            userId: req.user ? req.user._id : null
+          });
+
+          await logo.save();
+          console.log('Logo saved to database with ID:', logo._id);
+        } catch (dbError) {
+          console.error('Database error (non-fatal):', dbError);
+          // Continue even if DB save fails
+        }
 
         // Return response
         return res.status(200).json({
-          imageUrl: uploadResult.url,
+          imageUrl: logoData.imageUrl,
           message: 'Logo generated successfully',
-          config: config,
-          logoId: logo._id
+          config: config
         });
 
       } catch (stabilityError) {
-        console.error('Stability AI Generation Error:', {
+        console.error('Image Generation Error:', {
           message: stabilityError.message,
-          response: stabilityError.response?.data,
           stack: stabilityError.stack
         });
 
         return res.status(500).json({
           message: 'Failed to generate logo with Stability AI',
-          error: stabilityError.message,
-          details: stabilityError.response?.data
+          error: stabilityError.message
         });
       }
 
     } catch (error) {
       console.error('Comprehensive Logo Generation Error:', {
         message: error.message,
-        stack: error.stack,
-        fullError: error
+        stack: error.stack
       });
 
       res.status(500).json({ 
         message: 'Unexpected error generating logo',
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        error: error.message
+      });
+    }
+  },
+
+  // Test endpoint for Stability API
+  generateLogoTest: async (req, res) => {
+    try {
+      console.log('\n====== STABILITY API TEST ======');
+      
+      // Debug environment variables
+      if (process.env.STABILITY_API_KEY) {
+        const key = process.env.STABILITY_API_KEY;
+        console.log(`STABILITY_API_KEY: ${key.substring(0, 5)}...${key.substring(key.length - 3)}`);
+      } else {
+        console.log('STABILITY_API_KEY: not set');
+        return res.status(500).json({ 
+          error: 'API key not found', 
+          message: 'STABILITY_API_KEY environment variable is not set' 
+        });
+      }
+      
+      // Simple prompt for testing
+      const testPrompt = "Test logo for debugging";
+      console.log(`Test prompt: "${testPrompt}"`);
+      
+      // Create form data for the request
+      const form = new FormData();
+      form.append('prompt', testPrompt);
+      form.append('output_format', 'jpeg');
+      
+      console.log('Making test request to Stability AI API...');
+      
+      // Make the API request
+      const response = await axios.post(
+        'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+        form,
+        {
+          headers: { 
+            'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
+            'Accept': 'image/*',
+            ...form.getHeaders()
+          },
+          responseType: 'arraybuffer'
+        }
+      );
+      
+      console.log(`Response status: ${response.status}`);
+      console.log(`Content type: ${response.headers['content-type']}`);
+      
+      if (response.status === 200) {
+        // Success - convert to base64 and return
+        const base64Image = Buffer.from(response.data).toString('base64');
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+        const dataUrl = `data:${contentType};base64,${base64Image}`;
+        
+        console.log('Test successful - image generated');
+        console.log('====== END TEST ======\n');
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Test successful',
+          imageUrl: dataUrl
+        });
+      } else {
+        // Error response
+        let errorText = "Unknown error";
+        try {
+          errorText = Buffer.from(response.data).toString();
+        } catch (e) {
+          errorText = "Could not decode error response";
+        }
+        
+        console.error(`Error response: ${errorText}`);
+        console.log('====== END TEST ======\n');
+        
+        return res.status(response.status).json({
+          success: false,
+          error: `API returned status ${response.status}`,
+          message: errorText
+        });
+      }
+    } catch (error) {
+      console.error('Test failed with error:', error.message);
+      
+      // Extract as much information as possible
+      const errorDetail = {
+        message: error.message,
+        code: error.code
+      };
+      
+      if (error.response) {
+        errorDetail.status = error.response.status;
+        errorDetail.statusText = error.response.statusText;
+        
+        try {
+          const errorText = Buffer.from(error.response.data).toString();
+          errorDetail.responseData = errorText;
+        } catch (e) {
+          errorDetail.responseData = "Could not decode error response";
+        }
+      }
+      
+      console.error('Error details:', JSON.stringify(errorDetail, null, 2));
+      console.log('====== END TEST ======\n');
+      
+      return res.status(500).json({
+        success: false,
+        error: 'Test failed',
+        details: errorDetail
+      });
+    }
+  },
+
+  // Test endpoint that directly tries multiple approaches
+  testStabilityDirect: async (req, res) => {
+    try {
+      console.log('\n====== DIRECT STABILITY TEST ======');
+      
+      // Get the API key
+      const apiKey = process.env.STABILITY_API_KEY;
+      if (!apiKey) {
+        console.error('STABILITY_API_KEY not found');
+        return res.status(500).json({ 
+          error: 'API key not found',
+          message: 'STABILITY_API_KEY environment variable is not set'
+        });
+      }
+      
+      console.log(`API Key: ${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 3)}`);
+      
+      // Try JSON approach for simplicity
+      const response = await axios({
+        method: 'post',
+        url: 'https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image',
+        data: {
+          text_prompts: [{ text: "Test logo for debugging", weight: 1 }],
+          cfg_scale: 7,
+          height: 512,
+          width: 512,
+          samples: 1,
+          steps: 30
+        },
+        headers: { 
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log(`Response status: ${response.status}`);
+      
+      if (response.status === 200 && response.data.artifacts) {
+        const base64Image = response.data.artifacts[0].base64;
+        const dataUrl = `data:image/png;base64,${base64Image}`;
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Direct test successful',
+          imageUrl: dataUrl
+        });
+      } else {
+        return res.status(response.status).json({
+          success: false,
+          error: `API returned status ${response.status}`,
+          message: "Invalid response format"
+        });
+      }
+    } catch (error) {
+      console.error('Direct test failed with error:', error.message);
+      
+      // Prepare detailed error info
+      const errorInfo = {
+        message: error.message,
+        code: error.code
+      };
+      
+      if (error.response) {
+        errorInfo.status = error.response.status;
+        
+        try {
+          if (typeof error.response.data === 'string') {
+            errorInfo.responseData = error.response.data;
+          } else if (error.response.data instanceof Buffer) {
+            errorInfo.responseData = error.response.data.toString();
+          } else {
+            errorInfo.responseData = JSON.stringify(error.response.data);
+          }
+        } catch (e) {
+          errorInfo.responseData = "Could not decode error response";
+        }
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: 'Direct test failed',
+        details: errorInfo
       });
     }
   },
@@ -117,25 +375,59 @@ const logoController = {
         return res.status(400).json({ message: 'No file uploaded' });
       }
 
-      // Upload to S3 or local storage
-      const uploadResult = await s3Service.uploadFile(req.file, 'logos/uploaded');
-
-      const logo = new Logo({
-        imageUrl: uploadResult.url,
-        type: 'uploaded',
-        status: 'completed',
-        metadata: {
-          originalName: req.file.originalname,
-          fileSize: req.file.size,
-          mimeType: req.file.mimetype
+      // Upload to S3 if configured
+      let logoData;
+      
+      try {
+        // Try S3 upload
+        const uploadResult = await s3Service.uploadFile(req.file, 'logos/uploaded');
+        logoData = {
+          imageUrl: uploadResult.url,
+          s3Key: uploadResult.key
+        };
+      } catch (uploadError) {
+        console.error('S3 upload failed, using local storage:', uploadError);
+        
+        // Fallback to local storage
+        const uploadsDir = path.join(__dirname, '../../uploads/logos');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
         }
-      });
+        
+        const filename = `logo-${Date.now()}-${req.file.originalname}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, req.file.buffer);
+        
+        logoData = {
+          imageUrl: `/uploads/logos/${filename}`,
+          s3Key: null
+        };
+      }
 
-      await logo.save();
+      // Try to save to database
+      try {
+        const logo = new Logo({
+          imageUrl: logoData.imageUrl,
+          s3Key: logoData.s3Key,
+          type: 'uploaded',
+          status: 'completed',
+          userId: req.user ? req.user._id : null,
+          metadata: {
+            originalName: req.file.originalname,
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype
+          }
+        });
+
+        await logo.save();
+      } catch (dbError) {
+        console.error('Database error (non-fatal):', dbError);
+        // Continue without saving to database
+      }
 
       res.status(200).json({ 
         message: 'Logo uploaded successfully', 
-        logo: uploadResult 
+        logo: logoData
       });
     } catch (error) {
       console.error('Logo upload error:', error);
@@ -149,7 +441,12 @@ const logoController = {
   // Get All Logos
   getUserLogos: async (req, res) => {
     try {
-      const logos = await Logo.find().sort({ createdAt: -1 });
+      const userId = req.user?._id;
+      
+      // If user is authenticated, get their logos, otherwise return empty array
+      const query = userId ? { userId } : {};
+      const logos = await Logo.find(query).sort({ createdAt: -1 });
+      
       res.status(200).json({ logos });
     } catch (error) {
       console.error('Get user logos error:', error);
@@ -218,8 +515,12 @@ const logoController = {
       }
 
       // Delete from S3 if applicable
-      if (logo.s3Key) {
-        await s3Service.deleteFile(logo.s3Key);
+      if (logo.s3Key && s3Service.deleteFile) {
+        try {
+          await s3Service.deleteFile(logo.s3Key);
+        } catch (deleteError) {
+          console.error('Error deleting from S3 (non-fatal):', deleteError);
+        }
       }
 
       res.status(200).json({ 
