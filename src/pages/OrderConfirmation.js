@@ -10,35 +10,54 @@ const OrderConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Get order ID from URL params
+  const params = new URLSearchParams(location.search);
+  const orderId = params.get('orderId');
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
-        // Get order ID from URL params
-        const params = new URLSearchParams(location.search);
-        const orderId = params.get('orderId');
-
         if (!orderId) {
           navigate('/');
           return;
         }
 
+        console.log(`Fetching order details for ID: ${orderId}`);
+        
         // Fetch order details from API
-        const response = await fetch(`/api/orders/${orderId}`);
+        const response = await fetch(`http://localhost:5000/api/orders/${orderId}`);
+        
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch order details');
+          throw new Error(`Failed to fetch order details. Status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('Order details fetched:', data);
+        
+        // Check if we have valid data
+        if (!data || typeof data !== 'object') {
+          throw new Error('Invalid order data received');
+        }
+        
         setOrderDetails(data);
+        setError(null); // Clear any previous errors
       } catch (err) {
-        setError('Unable to load order details. Please try again later.');
+        console.error('Error fetching order details:', err);
+        setError(err.message || 'Unable to load order details. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrderDetails();
-  }, [location, navigate]);
+  }, [orderId, location, navigate]);
+
+  // Explicitly check if we have valid order details data
+  const hasValidOrderDetails = orderDetails && 
+                              typeof orderDetails === 'object' && 
+                              orderDetails.orderId;
 
   if (loading) {
     return (
@@ -51,12 +70,28 @@ const OrderConfirmation = () => {
     );
   }
 
-  if (error) {
+  // If we don't have valid order details, show fallback content
+  if (!hasValidOrderDetails) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <Alert>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="max-w-3xl mx-auto">
+          <Alert>
+            <AlertDescription>{error || 'Unable to load order details. Please try again later.'}</AlertDescription>
+          </Alert>
+          <div className="mt-6 text-center">
+            <p className="mb-4">Your order has been processed successfully, but we're having trouble displaying the details.</p>
+            <p className="mb-4">Your order ID is: <strong>{orderId}</strong></p>
+            <p>Please save this order ID for your reference.</p>
+            <div className="mt-6">
+              <Link
+                to="/"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Continue Shopping
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -123,8 +158,8 @@ const OrderConfirmation = () => {
               <div>
                 <h3 className="font-medium mb-2">Items Ordered</h3>
                 <div className="space-y-4">
-                  {orderDetails.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center">
+                  {orderDetails.items && orderDetails.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
                       <div className="flex items-center">
                         {item.image && (
                           <img
@@ -138,16 +173,14 @@ const OrderConfirmation = () => {
                           <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                           {item.customizations && (
                             <div className="text-sm text-gray-600">
-                              <p>Size: {item.customizations.size}</p>
-                              <p>Color: {item.customizations.color}</p>
-                              {item.customizations.logo && (
-                                <p>Logo: Custom logo included</p>
-                              )}
+                              {Object.entries(item.customizations || {}).map(([key, value]) => (
+                                value && <p key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}: {value}</p>
+                              ))}
                             </div>
                           )}
                         </div>
                       </div>
-                      <p className="font-medium">${item.price.toFixed(2)}</p>
+                      <p className="font-medium">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</p>
                     </div>
                   ))}
                 </div>
@@ -157,21 +190,21 @@ const OrderConfirmation = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${orderDetails.subtotal.toFixed(2)}</span>
+                    <span>${orderDetails.subtotal?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${orderDetails.shipping.toFixed(2)}</span>
+                    <span>${orderDetails.shipping?.toFixed(2)}</span>
                   </div>
                   {orderDetails.tax > 0 && (
                     <div className="flex justify-between">
                       <span>Tax</span>
-                      <span>${orderDetails.tax.toFixed(2)}</span>
+                      <span>${orderDetails.tax?.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>${orderDetails.total.toFixed(2)}</span>
+                    <span>${orderDetails.total?.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -185,18 +218,18 @@ const OrderConfirmation = () => {
             <CardTitle>Shipping Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-medium mb-2">Shipping Address</h3>
                 <div className="text-gray-600">
-                  <p>{orderDetails.shippingAddress.name}</p>
-                  <p>{orderDetails.shippingAddress.companyName}</p>
-                  <p>{orderDetails.shippingAddress.address}</p>
+                  <p>{orderDetails.shippingAddress?.name}</p>
+                  <p>{orderDetails.shippingAddress?.companyName}</p>
+                  <p>{orderDetails.shippingAddress?.address}</p>
                   <p>
-                    {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state}{' '}
-                    {orderDetails.shippingAddress.zipCode}
+                    {orderDetails.shippingAddress?.city}, {orderDetails.shippingAddress?.state}{' '}
+                    {orderDetails.shippingAddress?.zipCode}
                   </p>
-                  <p>{orderDetails.shippingAddress.country}</p>
+                  <p>{orderDetails.shippingAddress?.country}</p>
                 </div>
               </div>
               <div>

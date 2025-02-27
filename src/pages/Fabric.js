@@ -148,12 +148,15 @@ const Fabric = () => {
       
       console.log('Order created:', orderResponse);
       
-      // Then add the item to the local cart context
+      // Calculate the correct item price (price per unit * length * quantity)
+      const totalItemPrice = orderSummary.totalPrice;
+      
+      // Then add the item to the local cart context with the correct total price
       addToCart({
         id: selectedFabric.id,
         name: selectedFabric.name,
-        price: selectedFabric.price,
-        quantity: fabricConfig.quantity,
+        price: totalItemPrice, // Use the total price from orderSummary
+        quantity: 1, // Set to 1 because we're treating this as a single custom item
         image: selectedFabric.images && selectedFabric.images.length > 0 
           ? selectedFabric.images[0].url 
           : null,
@@ -161,6 +164,7 @@ const Fabric = () => {
           color: fabricConfig.color,
           style: fabricConfig.style,
           length: fabricConfig.length,
+          quantity: fabricConfig.quantity, // Store the fabric quantity as a customization
           logo: fabricConfig.logo
         },
         orderId: orderResponse.orderId // Store the order ID from the API response
@@ -172,10 +176,6 @@ const Fabric = () => {
       // Optional: Reset the form or keep the current selection
       // setSelectedFabric(null);
       // setFabricConfig({ type: '', color: '', length: 1, style: '', quantity: 1, logo: null });
-
-      // Show success message or redirect to cart
-      alert('Added to cart successfully!');
-
     } catch (err) {
       console.error('Error placing order:', err);
       setError('Failed to add to cart. Please try again.');

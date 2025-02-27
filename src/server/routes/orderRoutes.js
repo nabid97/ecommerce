@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 
+// In-memory order storage for demo purposes
+// In a real app, this would be stored in a database
+const orderStorage = {};
+
 // Debugging middleware
 router.use((req, res, next) => {
   console.log(`
@@ -19,23 +23,18 @@ router.post('/', async (req, res) => {
   try {
     console.log('Creating new order with data:', req.body);
     
-    // In a real application, you would save this to your database
-    // For now, we'll just mock a successful response
-    
     // Extract data from the request
     const { items, shippingInfo, subtotal, tax, shipping, total, paymentDetails } = req.body;
     
-    // Create mock order ID
+    // Create order ID
     const orderId = `ORD-${Date.now()}`;
     
-    // Send success response
-    res.status(201).json({
-      success: true,
-      message: 'Order created successfully',
+    // Store order in our in-memory storage
+    orderStorage[orderId] = {
       orderId,
       orderDate: new Date().toISOString(),
       items,
-      shippingAddress: shippingInfo,
+      shippingAddress: shippingInfo, // Save the actual shipping info from checkout
       subtotal,
       tax,
       shipping,
@@ -43,6 +42,15 @@ router.post('/', async (req, res) => {
       status: 'processing',
       paymentStatus: 'paid',
       paymentDetails
+    };
+    
+    console.log('Order saved to storage:', orderStorage[orderId]);
+    
+    // Send success response
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      ...orderStorage[orderId]
     });
   } catch (error) {
     console.error('Error creating order:', error);
@@ -57,9 +65,19 @@ router.post('/', async (req, res) => {
 // Get specific order
 router.get('/:id', async (req, res) => {
   try {
-    // Mock order data
-    const order = {
-      orderId: req.params.id,
+    const orderId = req.params.id;
+    console.log(`Fetching order details for ID: ${orderId}`);
+    
+    // Check if order exists in our storage
+    if (orderStorage[orderId]) {
+      console.log('Found order in storage:', orderStorage[orderId]);
+      return res.status(200).json(orderStorage[orderId]);
+    }
+    
+    // If order not found in storage, return a mock order (only as fallback)
+    console.log('Order not found in storage, returning mock data');
+    const mockOrder = {
+      orderId: orderId,
       orderDate: new Date().toISOString(),
       items: [
         {
@@ -90,12 +108,30 @@ router.get('/:id', async (req, res) => {
       status: 'processing'
     };
     
-    res.status(200).json(order);
+    res.status(200).json(mockOrder);
   } catch (error) {
     console.error('Error fetching order:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to fetch order',
+      error: error.message 
+    });
+  }
+});
+
+// List all stored orders (for debugging)
+router.get('/', async (req, res) => {
+  try {
+    const orderIds = Object.keys(orderStorage);
+    res.status(200).json({ 
+      count: orderIds.length,
+      orderIds 
+    });
+  } catch (error) {
+    console.error('Error listing orders:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to list orders',
       error: error.message 
     });
   }

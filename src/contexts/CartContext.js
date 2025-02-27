@@ -19,13 +19,15 @@ export const CartProvider = ({ children }) => {
   const calculateTotals = () => {
     const totals = cart.reduce(
       (acc, item) => {
-        acc.total += item.price * item.quantity;
+        // For fabric items, we use the price directly as it already includes length and quantity
+        const itemTotal = item.price * item.quantity;
+        acc.total += itemTotal;
         acc.itemCount += item.quantity;
         return acc;
       },
       { total: 0, itemCount: 0 }
     );
-
+  
     setTotal(totals.total);
     setItemCount(totals.itemCount);
   };

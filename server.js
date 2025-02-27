@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51Qw9JaJkWEUWirtQd3lx62XDRkZOivj3FTdIPOt4OpQ8iBKJoN89HlKsFn5sKsXIxoJCRFym2Ar2qbB36dlwNs7G00DThz6401');
 require('dotenv').config();
 
 // Environment variables check
@@ -48,7 +48,6 @@ const fabricRoutes = require(path.join(__dirname, 'src/server/routes/fabricRoute
 const authRoutes = require(path.join(__dirname, 'src/server/routes/authRoutes'));
 const logoRoutes = require(path.join(__dirname, 'src/server/routes/logoRoutes'));
 const orderRoutes = require(path.join(__dirname, 'src/server/routes/orderRoutes'));
-
 
 // Detailed request logging middleware
 app.use((req, res, next) => {
@@ -272,12 +271,16 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost/fabricstore'
 
 const startServer = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('✓ MongoDB connected successfully');
+    // Try to connect to MongoDB, but don't block server startup if it fails
+    try {
+      await mongoose.connect(MONGODB_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log('✓ MongoDB connected successfully');
+    } catch (dbError) {
+      console.error('MongoDB connection failed, but server will continue:', dbError.message);
+    }
 
     // Start Express server
     const server = app.listen(PORT, () => {
