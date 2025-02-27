@@ -248,6 +248,8 @@ const Checkout = () => {
 
   const handlePaymentSuccess = async (paymentIntent) => {
     try {
+      console.log('Payment successful, creating order...', paymentIntent);
+      
       // Create the final order with payment information
       const response = await fetch('http://localhost:5000/api/orders', {
         method: 'POST',
@@ -255,22 +257,30 @@ const Checkout = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...orderData,
+          items: orderData.items,
+          shippingInfo: orderData.shippingInfo,
+          subtotal: orderData.subtotal,
+          tax: orderData.tax,
+          shipping: orderData.shipping,
+          total: orderData.total,
           paymentDetails: {
             id: paymentIntent.id,
             status: paymentIntent.status,
             amount: paymentIntent.amount,
             method: 'Credit Card',
-            last4: paymentIntent.payment_method_details?.card?.last4
+            last4: paymentIntent.payment_method_details?.card?.last4 || '****'
           }
         }),
       });
-
+  
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorData = await response.json();
+        console.error('Order creation response error:', errorData);
+        throw new Error(errorData.message || 'Failed to create order');
       }
-
+  
       const orderResponse = await response.json();
+      console.log('Order created successfully:', orderResponse);
       
       // Clear the cart
       clearCart();

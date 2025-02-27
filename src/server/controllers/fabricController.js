@@ -38,6 +38,26 @@ const sampleFabrics = [
       reorderPoint: 300
     },
     status: 'active'
+  },
+  // Added missing 'linen' fabric to match client-side data
+  {
+    id: 'linen',
+    name: 'Linen',
+    description: 'Light, natural fabric',
+    type: 'linen',
+    colors: [
+      { name: 'White', code: '#FFFFFF', inStock: true },
+      { name: 'Beige', code: '#F5F5DC', inStock: true },
+      { name: 'Grey', code: '#808080', inStock: true }
+    ],
+    price: 8.99,
+    minOrderQuantity: 30,
+    stock: {
+      available: 800,
+      reserved: 0,
+      reorderPoint: 150
+    },
+    status: 'active'
   }
 ];
 

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51Qw9JaJkWEUWirtQd3lx62XDRkZOivj3FTdIPOt4OpQ8iBKJoN89HlKsFn5sKsXIxoJCRFym2Ar2qbB36dlwNs7G00DThz6401');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 // Environment variables check
@@ -47,6 +47,8 @@ app.use(compression());
 const fabricRoutes = require(path.join(__dirname, 'src/server/routes/fabricRoutes'));
 const authRoutes = require(path.join(__dirname, 'src/server/routes/authRoutes'));
 const logoRoutes = require(path.join(__dirname, 'src/server/routes/logoRoutes'));
+const orderRoutes = require(path.join(__dirname, 'src/server/routes/orderRoutes'));
+
 
 // Detailed request logging middleware
 app.use((req, res, next) => {
@@ -128,6 +130,7 @@ app.use(express.urlencoded({
 app.use('/api/fabrics', fabricRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/logos', logoRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
