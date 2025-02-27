@@ -23,12 +23,16 @@ router.get('/test-direct', logoController.testStabilityDirect);
 // Generate logo route
 router.post('/generate', logoController.generateLogo);
 
+// Add the missing route for clothing visualization
+router.post('/visualize-clothing', logoController.generateClothingVisualization);
+
 // Other routes
 router.post('/upload', logoController.uploadLogo);
 router.get('/', logoController.getUserLogos);
 router.get('/:id', logoController.getLogo);
 router.delete('/:id', logoController.deleteLogo);
 router.put('/:id', logoController.updateLogo);
-router.post('/visualize-clothing', logoController.generateClothingVisualization);
+router.post('/simple-clothing-viz', logoController.simpleClothingVisualization);
+
 
 module.exports = router;

@@ -15,6 +15,58 @@ const Clothing = () => {
   const [generateVisualization, setGenerateVisualization] = useState(false);
   const [imageGenerating, setImageGenerating] = useState(false);
   
+  const getPlaceholderTextImage = (text, bgColor = '#f5f5f5', textColor = '#333333', width = 400, height = 320) => {
+    // Create a data URL for a placeholder image with text
+    // This doesn't rely on any external services
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    
+    // Background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Text
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Handle long text by wrapping or truncating
+    const maxWidth = width - 40;
+    if (ctx.measureText(text).width > maxWidth) {
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = words[0];
+      
+      for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = ctx.measureText(currentLine + " " + word).width;
+        if (width < maxWidth) {
+          currentLine += " " + word;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      lines.push(currentLine);
+      
+      // Draw each line, centered
+      const lineHeight = 30;
+      const y = height/2 - ((lines.length - 1) * lineHeight)/2;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, width/2, y + i * lineHeight);
+      });
+    } else {
+      // Just draw the text centered
+      ctx.fillText(text, width/2, height/2);
+    }
+    
+    // Return as data URL
+    return canvas.toDataURL('image/png');
+  };
+  
   // Clean up object URLs when component unmounts or when logoPreview changes
   useEffect(() => {
     return () => {
@@ -199,33 +251,36 @@ const Clothing = () => {
   };
 
   // Generate AI visualization of clothing with logo
-  const generateClothingImage = async () => {
-    setError('');
-    setImageGenerating(true);
+  
+// Updated generateClothingImage function
+const generateClothingImage = async () => {
+  setError('');
+  setImageGenerating(true);
+  
+  try {
+    // Construct prompt based on product configuration
+    const clothingType = productConfig.clothingType === 'custom' ? 
+      productConfig.customDescription : productConfig.clothingType;
+    
+    const color = productConfig.color === 'custom' ? 
+      productConfig.customColor : productConfig.color;
+    
+    const style = productConfig.style === 'custom' ? 
+      productConfig.customStyle : productConfig.style;
+    
+    const fabric = productConfig.fabric === 'custom' ? 
+      productConfig.customFabric : productConfig.fabric;
+    
+    // Build the prompt
+    const prompt = `Create a professional product photo of a ${color} ${style} ${clothingType} made of ${fabric} fabric. 
+      The garment should have a logo positioned at the ${productConfig.logoPosition} of the ${clothingType}.
+      The logo is ${productConfig.logoSize} in size. Clean product photography on white background, highly detailed.`;
+      
+    console.log("Image generation prompt:", prompt);
     
     try {
-      // Construct prompt based on product configuration
-      const clothingType = productConfig.clothingType === 'custom' ? 
-        productConfig.customDescription : productConfig.clothingType;
-      
-      const color = productConfig.color === 'custom' ? 
-        productConfig.customColor : productConfig.color;
-      
-      const style = productConfig.style === 'custom' ? 
-        productConfig.customStyle : productConfig.style;
-      
-      const fabric = productConfig.fabric === 'custom' ? 
-        productConfig.customFabric : productConfig.fabric;
-      
-      // Build the prompt
-      const prompt = `Create a professional product photo of a ${color} ${style} ${clothingType} made of ${fabric} fabric. 
-        The garment should have a logo positioned at the ${productConfig.logoPosition} of the ${clothingType}.
-        The logo is ${productConfig.logoSize} in size. Clean product photography on white background, highly detailed.`;
-        
-      console.log("Image generation prompt:", prompt);
-      
-      // Use the logoController's new endpoint for clothing visualization
-      const response = await axios.post('/api/logos/visualize-clothing', {
+      // Try the main visualization endpoint
+      const response = await axios.post('http://localhost:5000/api/logos/visualize-clothing', {
         prompt: prompt,
         config: {
           clothingType: productConfig.clothingType,
@@ -245,19 +300,51 @@ const Clothing = () => {
       
       if (response.data && response.data.imageUrl) {
         setGeneratedImage(response.data.imageUrl);
-      } else {
-        throw new Error('No image was generated');
+        return;
       }
-    } catch (err) {
-      console.error('Error generating clothing image:', err);
-      // Fallback to placeholder image if API fails
-      const fallbackImage = `https://via.placeholder.com/800x600/f5f5f5/333333?text=${encodeURIComponent(`${productConfig.color} ${productConfig.clothingType}`)}`;
-      setGeneratedImage(fallbackImage);
-      setError('Server error. Using placeholder image instead.');
-    } finally {
-      setImageGenerating(false);
+    } catch (mainEndpointError) {
+      console.warn("Main endpoint failed:", mainEndpointError);
+      throw mainEndpointError;
     }
-  };
+    
+    throw new Error('Failed to generate image');
+  } catch (err) {
+    console.error('Error generating clothing image:', err);
+    
+    // Create a local placeholder image
+    const placeholderText = `${productConfig.color} ${productConfig.clothingType}`;
+    const placeholderImage = getPlaceholderTextImage(placeholderText);
+    
+    setGeneratedImage(placeholderImage);
+    setError('Server error. Using placeholder image instead.');
+  } finally {
+    setImageGenerating(false);
+  }
+};
+
+// And then when you use the generated image:
+{generatedImage && (
+  <div className="bg-white border rounded-lg p-4 flex justify-center">
+    <img 
+      src={generatedImage} 
+      alt="Generated clothing visualization" 
+      className="max-w-full max-h-80"
+      onError={(e) => {
+        console.error('Failed to load generated image');
+        
+        // Create a fallback image directly when loading fails
+        const fallbackImage = getPlaceholderTextImage(
+          `${productConfig.color} ${productConfig.clothingType}`,
+          '#f5f5f5',
+          '#333333'
+        );
+        
+        e.target.src = fallbackImage;
+        e.target.alt = 'Image placeholder';
+      }}
+    />
+  </div>
+)}
 
   // Place order
   const handleSubmit = async () => {

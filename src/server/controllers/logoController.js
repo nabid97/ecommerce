@@ -280,6 +280,47 @@ const logoController = {
       });
     }
   },
+  // Add this method to your logoController.js:
+
+// Simple clothing visualization (fallback that doesn't use Stability API)
+simpleClothingVisualization: async (req, res) => {
+  try {
+    console.log('\n====== SIMPLE CLOTHING VISUALIZATION REQUEST ======');
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+    
+    const { config } = req.body;
+    
+    // Validate request
+    if (!config || !config.clothingType) {
+      return res.status(400).json({ 
+        message: 'Clothing configuration is required',
+        receivedBody: req.body 
+      });
+    }
+
+    // Create a placeholder URL with the clothing color and type
+    const clothingType = config.clothingType === 'custom' ? 
+      config.customDescription || 'clothing' : config.clothingType;
+    
+    const color = config.color === 'custom' ? 
+      config.customColor || 'custom' : config.color;
+      
+    // Return a success response with a placeholder image URL
+    return res.status(200).json({
+      success: true,
+      message: 'Simple visualization generated',
+      imageUrl: `/api/placeholder/400/320?text=${color}+${clothingType}`,
+      config: config
+    });
+    
+  } catch (error) {
+    console.error('Simple Visualization Error:', error);
+    res.status(500).json({ 
+      message: 'Error generating simple visualization',
+      error: error.message
+    });
+  }
+},
   // Generate clothing visualization
   generateClothingVisualization: async (req, res) => {
     try {
