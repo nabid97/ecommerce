@@ -31,3 +31,6 @@ package-lock.json
 dist/
 build/
 "@ | Out-File -FilePath ".gitignore"
+# Ignore secrets.json file
+secrets.json
+src/secrets.json
