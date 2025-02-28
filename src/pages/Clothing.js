@@ -319,6 +319,9 @@ const Clothing = () => {
     if (!file) return;
     
     try {
+      // Reset previous error state if any
+      setError('');
+      
       // Validate file
       if (!file.type.match('image.*')) {
         setError('Please select an image file');
@@ -333,18 +336,53 @@ const Clothing = () => {
       
       console.log("File selected:", file.name, file.type, file.size);
       
+      // Clean up any previous object URL before creating a new one
+      if (logoPreview && logoPreview.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(logoPreview);
+          console.log("Revoked previous object URL");
+        } catch (revokeError) {
+          console.warn("Failed to revoke previous URL:", revokeError);
+        }
+      }
+      
       // Store the file for later upload
       setLogoFile(file);
       
-      // Create an object URL for preview
-      const objectUrl = URL.createObjectURL(file);
-      console.log("Created object URL for preview:", objectUrl);
-      setLogoPreview(objectUrl);
+      // Create a new object URL for preview
+      try {
+        const objectUrl = URL.createObjectURL(file);
+        console.log("Created new object URL for preview:", objectUrl);
+        setLogoPreview(objectUrl);
+        
+        // Also automatically update visualization state if needed
+        if (!generateVisualization) {
+          setGenerateVisualization(true);
+        }
+      } catch (urlError) {
+        console.error("Failed to create object URL:", urlError);
+        setError("Failed to create preview. Please try again.");
+      }
     } catch (error) {
       console.error("Logo upload error:", error);
       setError("Failed to process the selected file");
     }
   };
+  
+  // Also add this useEffect to clean up object URLs on unmount:
+  useEffect(() => {
+    return () => {
+      // Clean up function to revoke object URLs when component unmounts
+      if (logoPreview && logoPreview.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(logoPreview);
+          console.log("Revoked object URL on component unmount");
+        } catch (error) {
+          console.warn("Error revoking URL on unmount:", error);
+        }
+      }
+    };
+  }, [logoPreview]);
 
   // Calculate order price
   const calculatePrice = () => {
@@ -911,53 +949,61 @@ const Clothing = () => {
                   </div>
                 </div>
                 
-                {/* AI Visualization Option */}
-                <div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="generate-image"
-                      checked={generateVisualization}
-                      onChange={(e) => {
-                        setGenerateVisualization(e.target.checked);
-                        handleConfigChange('generateImage', e.target.checked);
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="generate-image" className="ml-2 block text-sm text-gray-900">
-                      Generate 3D visualization of the clothing with logo
-                    </label>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Our 3D engine will create a preview of your customized clothing with logo
-                  </p>
-                  
-                  {generateVisualization && (
-                    <button
-                      onClick={generateClothingImage}
-                      disabled={imageGenerating || !logoPreview}
-                      className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {imageGenerating ? (
-                        <div className="flex items-center justify-center">
-                          <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          Generating...
-                        </div>
-                      ) : (
-                        'Generate Visualization'
-                      )}
-                    </button>
-                  )}
-                  
-                  {!logoPreview && generateVisualization && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Please upload a logo first to generate visualization
-                    </p>
-                  )}
+
+          {/* AI Visualization Option */}
+          <div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="generate-image"
+                checked={generateVisualization}
+                onChange={(e) => {
+                  setGenerateVisualization(e.target.checked);
+                  handleConfigChange('generateImage', e.target.checked);
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="generate-image" className="ml-2 block text-sm text-gray-900">
+                Generate visualization of the clothing with logo
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Our visualization engine will create a preview of your customized clothing with logo
+            </p>
+            
+            {/* Replace the button with this more reliable version */}
+            <button
+              onClick={() => {
+                setImageGenerating(true);
+                // Force set visualization to true and trigger a re-render
+                setGenerateVisualization(true);
+                setTimeout(() => {
+                  setImageGenerating(false);
+                }, 500); // Add a slight delay to make the loading state visible
+              }}
+              disabled={imageGenerating || !logoPreview}
+              className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {imageGenerating ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating...
                 </div>
+              ) : (
+                'Generate Visualization'
+              )}
+            </button>
+            
+            {/* Keep this part as is */}
+            {!logoPreview && generateVisualization && (
+              <p className="text-xs text-red-500 mt-1">
+                Please upload a logo first to generate visualization
+              </p>
+            )}
+          </div>
               </div>
             </CardContent>
           </Card>
@@ -983,35 +1029,74 @@ const Clothing = () => {
         
         {/* Preview and Summary Panel */}
         <div className="space-y-6">
-          {/* 3D Visualization */}
-          {generateVisualization && logoPreview && (
-            <Card>
-              <CardContent>
-                <h2 className="text-xl font-semibold mb-4">
-                  3D Visualization
-                </h2>
-                
-                <div className="bg-white border rounded-lg p-4 flex justify-center">
-                  <ClothingVisualizer 
-                    clothingType={productConfig.clothingType}
-                    color={productConfig.color === 'custom' ? productConfig.customColor : productConfig.color}
-                    logoImage={logoPreview}
-                    logoPosition={productConfig.logoPosition}
-                    logoSize={productConfig.logoSize}
-                  />
-                </div>
-                
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-600">
-                    This is a 3D visualization of how your logo will appear on the {productConfig.clothingType}.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Actual product may vary slightly from visualization.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+         
+         {/* Simplified Visualization that will appear immediately */}
+{generateVisualization && logoPreview && (
+  <Card>
+    <CardContent>
+      <h2 className="text-xl font-semibold mb-4">
+        Clothing Visualization
+      </h2>
+      
+      <div className="bg-white border rounded-lg p-4">
+        {/* Simple visualization that will work reliably */}
+        <div className="relative">
+          {/* Basic clothing shape based on type */}
+          <div 
+            className="w-full aspect-[3/4] rounded flex items-center justify-center"
+            style={{ 
+              backgroundColor: 
+                productConfig.color === 'custom' 
+                  ? productConfig.customColorHex || '#FFFFFF'
+                  : productConfig.color
+            }}
+          >
+            {/* Text showing the clothing type */}
+            <div className="text-xl font-bold opacity-20">
+              {productConfig.clothingType.toUpperCase()}
+            </div>
+            
+            {/* Logo overlay */}
+            {logoPreview && (
+              <div 
+                className={`absolute ${
+                  productConfig.logoPosition === 'front-center' ? 'top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2' :
+                  productConfig.logoPosition === 'front-left' ? 'top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2' :
+                  productConfig.logoPosition === 'back-center' ? 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2' :
+                  'top-1/3 right-1/4 transform translate-x-1/2 -translate-y-1/2' /* sleeve */
+                }`}
+              >
+                <img 
+                  src={logoPreview} 
+                  alt="Your Logo" 
+                  className={`
+                    ${productConfig.logoSize === 'small' ? 'w-16 h-16' : 
+                      productConfig.logoSize === 'medium' ? 'w-24 h-24' : 
+                      'w-32 h-32'}
+                    object-contain
+                  `}
+                  onError={(e) => {
+                    console.error('Failed to load logo in visualization');
+                    e.target.src = '/api/placeholder/100/100?text=Logo+Error';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-4 text-center">
+        <p className="text-sm text-gray-600">
+          Visualization of your {productConfig.color} {productConfig.clothingType} with logo
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Actual product may vary slightly from visualization
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+)}
           
           {/* Price Estimation */}
           <Card>

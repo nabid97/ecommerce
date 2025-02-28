@@ -1,182 +1,206 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+// src/components/ClothingVisualizer.js
+import React, { useState } from 'react';
 
 const ClothingVisualizer = ({ 
-  clothingType, 
-  color, 
-  logoImage, 
-  logoPosition, 
-  logoSize 
+  clothingType = 't-shirt', 
+  color = 'white', 
+  logoPosition = 'front-center',
+  logoSize = 'medium',
+  logoImage = null
 }) => {
-  const containerRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    setIsLoading(true);
-    
-    // Get the container dimensions
-    const width = containerRef.current.clientWidth;
-    const height = width * 0.8; // Maintain aspect ratio
-    
-    // 1. Initialize Three.js renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    containerRef.current.innerHTML = '';
-    containerRef.current.appendChild(renderer.domElement);
-    
-    // 2. Create scene and camera
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 1000);
-    camera.position.z = 10;
-    
-    // 3. Load clothing template based on type
-    const clothingTextures = {
-      't-shirt': '/templates/tshirt_template.jpg',
-      'hoodie': '/templates/hoodie_template.jpg',
-      'polo': '/templates/polo_template.jpg',
-      // Add more as needed
+  // Convert color name to hex
+  const getHexFromColorName = (colorName) => {
+    const colorMap = {
+      'white': '#FFFFFF',
+      'black': '#000000',
+      'red': '#FF0000',
+      'blue': '#0000FF',
+      'navy': '#000080',
+      'green': '#008000',
+      'yellow': '#FFFF00',
+      'purple': '#800080',
+      'gray': '#808080',
+      'orange': '#FFA500',
+      'pink': '#FFC0CB',
+      'brown': '#8B4513'
     };
     
-    const templatePath = clothingTextures[clothingType] || clothingTextures['t-shirt'];
-    const clothingTextureLoader = new THREE.TextureLoader();
-    
-    const clothingPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, height),
-      new THREE.MeshBasicMaterial({ transparent: true })
-    );
-    
-    // 4. Load the template and apply color transform
-    clothingTextureLoader.load(templatePath, texture => {
-      // Apply the clothing texture
-      clothingPlane.material.map = texture;
-      
-      // Apply color transform (this is a simplified version)
-      if (color !== 'white') {
-        clothingPlane.material.color = new THREE.Color(getHexFromColorName(color));
-      }
-      
-      scene.add(clothingPlane);
-      
-      // 5. Add logo if available
-      if (logoImage) {
-        const logoTextureLoader = new THREE.TextureLoader();
-        
-        // Convert logo position to coordinates
-        const logoCoordinates = getLogoCoordinates(logoPosition, width, height);
-        const logoScale = getLogoScale(logoSize, width);
-        
-        logoTextureLoader.load(logoImage, logoTexture => {
-          // Calculate aspect ratio to maintain logo proportions
-          const logoAspect = logoTexture.image.width / logoTexture.image.height;
-          
-          // Create logo plane with proper proportions
-          const logoWidth = logoScale;
-          const logoHeight = logoScale / logoAspect;
-          
-          const logoPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(logoWidth, logoHeight),
-            new THREE.MeshBasicMaterial({ 
-              map: logoTexture,
-              transparent: true
-            })
-          );
-          
-          // Position the logo
-          logoPlane.position.set(
-            logoCoordinates.x, 
-            logoCoordinates.y, 
-            0.1 // Slightly in front of clothing
-          );
-          
-          scene.add(logoPlane);
-          setIsLoading(false);
-          
-          // Render the scene
-          renderer.render(scene, camera);
-        });
-      } else {
-        setIsLoading(false);
-        renderer.render(scene, camera);
-      }
-    });
-    
-    // Handle resizing
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      const newWidth = containerRef.current.clientWidth;
-      const newHeight = newWidth * 0.8;
-      
-      renderer.setSize(newWidth, newHeight);
-      camera.left = -newWidth / 2;
-      camera.right = newWidth / 2;
-      camera.top = newHeight / 2;
-      camera.bottom = -newHeight / 2;
-      camera.updateProjectionMatrix();
-      
-      renderer.render(scene, camera);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (containerRef.current?.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
-    };
-  }, [clothingType, color, logoImage, logoPosition, logoSize]);
+    // If it's a hex code already or not in our map, return as is
+    if (colorName.startsWith('#')) return colorName;
+    return colorMap[colorName.toLowerCase()] || '#FFFFFF';
+  };
   
+  // Get logo position coordinates
+  const getLogoPosition = (position, baseWidth, baseHeight) => {
+    const positions = {
+      'front-center': { x: baseWidth / 2, y: baseHeight / 2.5 },
+      'front-left': { x: baseWidth / 3, y: baseHeight / 3 },
+      'back-center': { x: baseWidth / 2, y: baseHeight / 2.5 },
+      'sleeve': { x: baseWidth * 0.8, y: baseHeight / 2.5 }
+    };
+    
+    return positions[position] || positions['front-center'];
+  };
+  
+  // Get logo dimensions based on size
+  const getLogoDimensions = (size, baseWidth) => {
+    const sizes = {
+      'small': baseWidth * 0.15,
+      'medium': baseWidth * 0.25,
+      'large': baseWidth * 0.35
+    };
+    
+    const width = sizes[size] || sizes.medium;
+    return { width, height: width };
+  };
+  
+  // Determine clothing template path
+  const getClothingTemplate = (type) => {
+    // In a real app, you would have SVG templates for each clothing type
+    // For this example, we'll use simple SVG shapes
+    
+    if (type === 'hoodie') {
+      return (
+        <path 
+          d="M50,50 L200,50 L230,120 L250,200 L250,300 L50,300 L50,200 L70,120 Z" 
+          strokeWidth="2"
+        />
+      );
+    } else if (type === 'polo') {
+      return (
+        <path 
+          d="M80,50 L220,50 L240,100 L240,300 L60,300 L60,100 Z" 
+          strokeWidth="2"
+        />
+      );
+    } else { // default t-shirt
+      return (
+        <path 
+          d="M80,50 L220,50 L240,100 L240,300 L60,300 L60,100 Z" 
+          strokeWidth="2"
+        />
+      );
+    }
+  };
+  
+  // Base dimensions
+  const baseWidth = 300;
+  const baseHeight = 350;
+  
+  // Logo positioning and sizing
+  const logoPos = getLogoPosition(logoPosition, baseWidth, baseHeight);
+  const logoDim = getLogoDimensions(logoSize, baseWidth);
+  
+  // Color
+  const colorHex = getHexFromColorName(color);
+  
+  // For darker colors, use a white stroke for contrast
+  const strokeColor = ['#000000', '#000080', '#0000FF', '#800080', '#8B4513'].includes(colorHex) ? '#FFFFFF' : '#000000';
+
   return (
-    <div className="relative">
-      <div ref={containerRef} className="w-full bg-white rounded shadow-sm"/>
-      {isLoading && (
+    <div className="relative w-full flex justify-center items-center">
+      {/* Main SVG clothing visualization */}
+      <svg 
+        width="100%" 
+        height="350" 
+        viewBox={`0 0 ${baseWidth} ${baseHeight}`} 
+        className="border rounded bg-white"
+      >
+        {/* Clothing shape */}
+        <g stroke={strokeColor} fill={colorHex}>
+          {getClothingTemplate(clothingType)}
+        </g>
+        
+        {/* Collar for polo or t-shirt */}
+        {(clothingType === 'polo' || clothingType === 't-shirt') && (
+          <path 
+            d="M120,50 L180,50 L170,80 L150,90 L130,80 Z" 
+            fill={colorHex === '#FFFFFF' ? '#F8F8F8' : '#000000'} 
+            fillOpacity="0.1"
+            stroke={strokeColor}
+          />
+        )}
+        
+        {/* Hood for hoodie */}
+        {clothingType === 'hoodie' && (
+          <ellipse 
+            cx={baseWidth / 2} 
+            cy="45" 
+            rx="70" 
+            ry="25" 
+            fill={colorHex === '#FFFFFF' ? '#F8F8F8' : '#000000'} 
+            fillOpacity="0.1"
+            stroke={strokeColor}
+          />
+        )}
+        
+        {/* Sleeves */}
+        <path 
+          d={clothingType === 'hoodie' 
+            ? "M50,140 L20,180 L30,200 L60,160 Z M250,140 L280,180 L270,200 L240,160 Z" 
+            : "M60,100 L20,150 L30,180 L70,110 Z M240,100 L280,150 L270,180 L230,110 Z"}
+          fill={colorHex}
+          stroke={strokeColor}
+        />
+        
+        {/* Text label for the clothing type */}
+        <text
+          x={baseWidth / 2}
+          y={baseHeight - 20}
+          textAnchor="middle"
+          className="text-xs"
+          stroke="none"
+          fill={strokeColor}
+        >
+          {clothingType.toUpperCase()}
+        </text>
+        
+        {/* Logo placement */}
+        {logoImage && (
+          <image
+            x={logoPos.x - (logoDim.width / 2)}
+            y={logoPos.y - (logoDim.height / 2)}
+            width={logoDim.width}
+            height={logoDim.height}
+            href={logoImage}
+            preserveAspectRatio="xMidYMid meet"
+            onLoad={() => setLogoLoaded(true)}
+            onError={() => setError(true)}
+          />
+        )}
+        
+        {/* If no logo provided, show placeholder */}
+        {!logoImage && (
+          <rect
+            x={logoPos.x - (logoDim.width / 2)}
+            y={logoPos.y - (logoDim.height / 2)}
+            width={logoDim.width}
+            height={logoDim.height}
+            fill="none"
+            stroke="#999"
+            strokeDasharray="5,5"
+          />
+        )}
+      </svg>
+      
+      {/* Loading indicators */}
+      {logoImage && !logoLoaded && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
         </div>
       )}
+      
+      {/* Error message */}
+      {error && (
+        <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-800 text-xs p-1 text-center">
+          Failed to load logo image
+        </div>
+      )}
     </div>
   );
-};
-
-// Helper functions
-const getHexFromColorName = (colorName) => {
-  const colorMap = {
-    'white': '#FFFFFF',
-    'black': '#000000',
-    'red': '#FF0000',
-    'blue': '#0000FF',
-    'navy': '#000080',
-    'green': '#008000',
-    'yellow': '#FFFF00',
-    'purple': '#800080',
-    'gray': '#808080',
-    // Add more colors as needed
-  };
-  
-  return colorMap[colorName] || colorName; // Return the color name if not found (might be hex already)
-};
-
-const getLogoCoordinates = (position, width, height) => {
-  // Convert logo position strings to x,y coordinates
-  const positionMap = {
-    'front-center': { x: 0, y: 0 },
-    'front-left': { x: -width/4, y: 0 },
-    'back-center': { x: 0, y: -height/6 },
-    'sleeve': { x: width/3, y: 0 }
-  };
-  
-  return positionMap[position] || positionMap['front-center'];
-};
-
-const getLogoScale = (size, containerWidth) => {
-  const scales = {
-    'small': containerWidth * 0.15,
-    'medium': containerWidth * 0.25,
-    'large': containerWidth * 0.35
-  };
-  
-  return scales[size] || scales.medium;
 };
 
 export default ClothingVisualizer;
