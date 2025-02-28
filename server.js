@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51Qw9JaJkWEUWirtQd3lx62XDRkZOivj3FTdIPOt4OpQ8iBKJoN89HlKsFn5sKsXIxoJCRFym2Ar2qbB36dlwNs7G00DThz6401');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY 
 require('dotenv').config();
 
 // Environment variables check

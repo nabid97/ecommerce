@@ -8,7 +8,7 @@ import { useCart } from '../contexts/CartContext';
 
 // IMPORTANT: Replace this with your actual publishable key
 // Do not use variables, just paste your key directly as a string
-const stripePromise = loadStripe('pk_test_51Qw9JaJkWEUWirtQuqP7laPdPbHxttgx9pxpdPI2CxazHZHN1026l94PrrXNYFV2SgsCfp87sYfiIBGgFKRa0Prx00JmPOtbra'); // ← Replace with your actual publishable key
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY); // ← Replace with your actual publishable key
 
 // Stripe payment form component
 const CheckoutForm = ({ clientSecret, orderData, onSuccess }) => {
