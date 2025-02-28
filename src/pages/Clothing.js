@@ -1,71 +1,211 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
+import * as THREE from 'three';
 
+// Helper function for Three.js visualization
+const ClothingVisualizer = ({ 
+  clothingType, 
+  color, 
+  logoImage, 
+  logoPosition, 
+  logoSize 
+}) => {
+  const containerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    setIsLoading(true);
+    
+    // Get the container dimensions
+    const width = containerRef.current.clientWidth;
+    const height = width * 0.8; // Maintain aspect ratio
+    
+    // 1. Initialize Three.js renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    containerRef.current.innerHTML = '';
+    containerRef.current.appendChild(renderer.domElement);
+    
+    // 2. Create scene and camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 1000);
+    camera.position.z = 10;
+    
+    // 3. Create basic clothing shape
+    const clothingPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(width * 0.8, height * 0.7),
+      new THREE.MeshBasicMaterial({ 
+        color: getHexFromColorName(color || 'white'),
+        transparent: true
+      })
+    );
+    scene.add(clothingPlane);
+    
+    // 4. Add clothing type text
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(clothingType, canvas.width/2, canvas.height/2);
+    
+    const textTexture = new THREE.CanvasTexture(canvas);
+    const textPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(width * 0.6, height * 0.2),
+      new THREE.MeshBasicMaterial({ 
+        map: textTexture,
+        transparent: true
+      })
+    );
+    textPlane.position.set(0, -height/3, 0.1);
+    scene.add(textPlane);
+    
+    // 5. Add logo if available
+    if (logoImage) {
+      // Create a texture from the logoImage URL
+      const logoTextureLoader = new THREE.TextureLoader();
+      
+      // Convert logo position to coordinates
+      const logoCoordinates = getLogoCoordinates(logoPosition, width, height);
+      const logoScale = getLogoScale(logoSize, width);
+      
+      logoTextureLoader.load(logoImage, logoTexture => {
+        // Calculate aspect ratio to maintain logo proportions
+        const logoAspect = logoTexture.image.width / logoTexture.image.height;
+        
+        // Create logo plane with proper proportions
+        const logoWidth = logoScale;
+        const logoHeight = logoScale / logoAspect;
+        
+        const logoPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(logoWidth, logoHeight),
+          new THREE.MeshBasicMaterial({ 
+            map: logoTexture,
+            transparent: true
+          })
+        );
+        
+        // Position the logo
+        logoPlane.position.set(
+          logoCoordinates.x, 
+          logoCoordinates.y, 
+          0.2 // Slightly in front of clothing
+        );
+        
+        scene.add(logoPlane);
+        
+        // Render the scene
+        renderer.render(scene, camera);
+        setIsLoading(false);
+      }, undefined, (error) => {
+        console.error('Error loading logo texture:', error);
+        renderer.render(scene, camera);
+        setIsLoading(false);
+      });
+    } else {
+      // Render without logo
+      renderer.render(scene, camera);
+      setIsLoading(false);
+    }
+    
+    // Handle resizing
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const newWidth = containerRef.current.clientWidth;
+      const newHeight = newWidth * 0.8;
+      
+      renderer.setSize(newWidth, newHeight);
+      camera.left = -newWidth / 2;
+      camera.right = newWidth / 2;
+      camera.top = newHeight / 2;
+      camera.bottom = -newHeight / 2;
+      camera.updateProjectionMatrix();
+      
+      renderer.render(scene, camera);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (containerRef.current?.contains(renderer.domElement)) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+    };
+  }, [clothingType, color, logoImage, logoPosition, logoSize]);
+  
+  return (
+    <div className="relative">
+      <div ref={containerRef} className="w-full h-64 bg-white rounded shadow-sm"/>
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Helper functions for the visualization
+const getHexFromColorName = (colorName) => {
+  const colorMap = {
+    'white': '#FFFFFF',
+    'black': '#000000',
+    'red': '#FF0000',
+    'blue': '#0000FF',
+    'navy': '#000080',
+    'green': '#008000',
+    'yellow': '#FFFF00',
+    'purple': '#800080',
+    'gray': '#808080',
+    'orange': '#FFA500',
+    'pink': '#FFC0CB',
+    'brown': '#8B4513'
+  };
+  
+  return colorMap[colorName] || (colorName.startsWith('#') ? colorName : '#FFFFFF');
+};
+
+const getLogoCoordinates = (position, width, height) => {
+  // Convert logo position strings to x,y coordinates
+  const positionMap = {
+    'front-center': { x: 0, y: 0 },
+    'front-left': { x: -width/4, y: 0 },
+    'back-center': { x: 0, y: -height/6 },
+    'sleeve': { x: width/3, y: 0 }
+  };
+  
+  return positionMap[position] || positionMap['front-center'];
+};
+
+const getLogoScale = (size, containerWidth) => {
+  const scales = {
+    'small': containerWidth * 0.15,
+    'medium': containerWidth * 0.25,
+    'large': containerWidth * 0.35
+  };
+  
+  return scales[size] || scales.medium;
+};
+
+// Main Clothing component
 const Clothing = () => {
   const { addToCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [generatedImage, setGeneratedImage] = useState(null);
-  const [logoUploadedFile, setLogoUploadedFile] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [generateVisualization, setGenerateVisualization] = useState(false);
   const [imageGenerating, setImageGenerating] = useState(false);
-  
-  const getPlaceholderTextImage = (text, bgColor = '#f5f5f5', textColor = '#333333', width = 400, height = 320) => {
-    // Create a data URL for a placeholder image with text
-    // This doesn't rely on any external services
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    
-    // Background
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
-    
-    // Text
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Handle long text by wrapping or truncating
-    const maxWidth = width - 40;
-    if (ctx.measureText(text).width > maxWidth) {
-      const words = text.split(' ');
-      const lines = [];
-      let currentLine = words[0];
-      
-      for (let i = 1; i < words.length; i++) {
-        const word = words[i];
-        const width = ctx.measureText(currentLine + " " + word).width;
-        if (width < maxWidth) {
-          currentLine += " " + word;
-        } else {
-          lines.push(currentLine);
-          currentLine = word;
-        }
-      }
-      lines.push(currentLine);
-      
-      // Draw each line, centered
-      const lineHeight = 30;
-      const y = height/2 - ((lines.length - 1) * lineHeight)/2;
-      lines.forEach((line, i) => {
-        ctx.fillText(line, width/2, y + i * lineHeight);
-      });
-    } else {
-      // Just draw the text centered
-      ctx.fillText(text, width/2, height/2);
-    }
-    
-    // Return as data URL
-    return canvas.toDataURL('image/png');
-  };
   
   // Clean up object URLs when component unmounts or when logoPreview changes
   useEffect(() => {
@@ -173,7 +313,7 @@ const Clothing = () => {
     }));
   };
 
-  // Handle logo file upload with a direct approach
+  // Handle logo file upload
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -194,9 +334,9 @@ const Clothing = () => {
       console.log("File selected:", file.name, file.type, file.size);
       
       // Store the file for later upload
-      setLogoUploadedFile(file);
+      setLogoFile(file);
       
-      // Create an object URL for preview (simpler approach than FileReader)
+      // Create an object URL for preview
       const objectUrl = URL.createObjectURL(file);
       console.log("Created object URL for preview:", objectUrl);
       setLogoPreview(objectUrl);
@@ -237,11 +377,6 @@ const Clothing = () => {
       total *= 1.15; // 15% premium for custom work
     }
     
-    // Add cost for image generation if selected
-    if (productConfig.generateImage) {
-      total += 9.99; // Flat fee for AI image generation
-    }
-    
     return {
       unitPrice: basePrice,
       subtotal: total,
@@ -250,101 +385,21 @@ const Clothing = () => {
     };
   };
 
-  // Generate AI visualization of clothing with logo
-  
-// Updated generateClothingImage function
-const generateClothingImage = async () => {
-  setError('');
-  setImageGenerating(true);
-  
-  try {
-    // Construct prompt based on product configuration
-    const clothingType = productConfig.clothingType === 'custom' ? 
-      productConfig.customDescription : productConfig.clothingType;
-    
-    const color = productConfig.color === 'custom' ? 
-      productConfig.customColor : productConfig.color;
-    
-    const style = productConfig.style === 'custom' ? 
-      productConfig.customStyle : productConfig.style;
-    
-    const fabric = productConfig.fabric === 'custom' ? 
-      productConfig.customFabric : productConfig.fabric;
-    
-    // Build the prompt
-    const prompt = `Create a professional product photo of a ${color} ${style} ${clothingType} made of ${fabric} fabric. 
-      The garment should have a logo positioned at the ${productConfig.logoPosition} of the ${clothingType}.
-      The logo is ${productConfig.logoSize} in size. Clean product photography on white background, highly detailed.`;
-      
-    console.log("Image generation prompt:", prompt);
+  // Generate 3D visualization of clothing with logo
+  const generateClothingImage = async () => {
+    setError('');
+    setImageGenerating(true);
     
     try {
-      // Try the main visualization endpoint
-      const response = await axios.post('http://localhost:5000/api/logos/visualize-clothing', {
-        prompt: prompt,
-        config: {
-          clothingType: productConfig.clothingType,
-          color: color,
-          style: style,
-          fabric: fabric,
-          logoPosition: productConfig.logoPosition,
-          logoSize: productConfig.logoSize,
-          customDescription: productConfig.customDescription || '',
-          customColor: productConfig.customColor || '',
-          customStyle: productConfig.customStyle || '',
-          customFabric: productConfig.customFabric || ''
-        }
-      });
-      
-      console.log("Image generation response:", response.data);
-      
-      if (response.data && response.data.imageUrl) {
-        setGeneratedImage(response.data.imageUrl);
-        return;
-      }
-    } catch (mainEndpointError) {
-      console.warn("Main endpoint failed:", mainEndpointError);
-      throw mainEndpointError;
+      // Simply set the flag to show the 3D visualization
+      setGenerateVisualization(true);
+      setImageGenerating(false);
+    } catch (err) {
+      console.error('Error generating clothing visualization:', err);
+      setError('Error generating visualization. Please try again.');
+      setImageGenerating(false);
     }
-    
-    throw new Error('Failed to generate image');
-  } catch (err) {
-    console.error('Error generating clothing image:', err);
-    
-    // Create a local placeholder image
-    const placeholderText = `${productConfig.color} ${productConfig.clothingType}`;
-    const placeholderImage = getPlaceholderTextImage(placeholderText);
-    
-    setGeneratedImage(placeholderImage);
-    setError('Server error. Using placeholder image instead.');
-  } finally {
-    setImageGenerating(false);
-  }
-};
-
-// And then when you use the generated image:
-{generatedImage && (
-  <div className="bg-white border rounded-lg p-4 flex justify-center">
-    <img 
-      src={generatedImage} 
-      alt="Generated clothing visualization" 
-      className="max-w-full max-h-80"
-      onError={(e) => {
-        console.error('Failed to load generated image');
-        
-        // Create a fallback image directly when loading fails
-        const fallbackImage = getPlaceholderTextImage(
-          `${productConfig.color} ${productConfig.clothingType}`,
-          '#f5f5f5',
-          '#333333'
-        );
-        
-        e.target.src = fallbackImage;
-        e.target.alt = 'Image placeholder';
-      }}
-    />
-  </div>
-)}
+  };
 
   // Place order
   const handleSubmit = async () => {
@@ -393,8 +448,8 @@ const generateClothingImage = async () => {
       
       console.log("Submitting order:", orderData);
       
-      // Submit to API
-      const response = await axios.post('/api/orders', orderData);
+      // Submit to API - use full URL to ensure correct server
+      const response = await axios.post('http://localhost:5000/api/orders', orderData);
       
       // Add to cart
       addToCart({
@@ -402,7 +457,7 @@ const generateClothingImage = async () => {
         name: `${productConfig.color} ${productConfig.clothingType} (${productConfig.size.toUpperCase()})`,
         price: pricingDetails.unitPrice,
         quantity: productConfig.quantity,
-        image: generatedImage,
+        image: null, // We don't have an image URL from 3D visualization
         customizations: {
           color: productConfig.color === 'custom' ? productConfig.customColor : productConfig.color,
           size: productConfig.size,
@@ -437,7 +492,7 @@ const generateClothingImage = async () => {
           name: `${productConfig.color} ${productConfig.clothingType} (${productConfig.size.toUpperCase()})`,
           price: pricingDetails.unitPrice,
           quantity: productConfig.quantity,
-          image: generatedImage,
+          image: null,
           customizations: {
             color: productConfig.color === 'custom' ? productConfig.customColor : productConfig.color,
             size: productConfig.size,
@@ -810,9 +865,8 @@ const generateClothingImage = async () => {
                                 onLoad={() => console.log("Logo image loaded successfully")}
                                 onError={(e) => {
                                   console.error('Failed to load logo preview image');
-                                  // Try to use a placeholder instead
                                   e.target.onerror = null; // Prevent infinite error loop
-                                  e.target.src = 'https://via.placeholder.com/200x200?text=Logo+Preview+Failed';
+                                  e.target.alt = 'Failed to load logo';
                                   setError('Failed to display logo preview');
                                 }}
                               />
@@ -823,7 +877,7 @@ const generateClothingImage = async () => {
                               e.preventDefault();
                               e.stopPropagation();
                               setLogoPreview(null);
-                              setLogoUploadedFile(null);
+                              setLogoFile(null);
                             }}
                             className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                             title="Remove logo"
@@ -871,11 +925,11 @@ const generateClothingImage = async () => {
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <label htmlFor="generate-image" className="ml-2 block text-sm text-gray-900">
-                      Generate AI visualization of the clothing with logo
+                      Generate 3D visualization of the clothing with logo
                     </label>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Our AI will create a realistic preview of your customized clothing with logo
+                    Our 3D engine will create a preview of your customized clothing with logo
                   </p>
                   
                   {generateVisualization && (
@@ -929,53 +983,32 @@ const generateClothingImage = async () => {
         
         {/* Preview and Summary Panel */}
         <div className="space-y-6">
-          {/* Generated Image Preview */}
-          {(generatedImage || logoPreview) && (
+          {/* 3D Visualization */}
+          {generateVisualization && logoPreview && (
             <Card>
               <CardContent>
                 <h2 className="text-xl font-semibold mb-4">
-                  {generatedImage ? 'AI Visualization' : 'Logo Preview'}
+                  3D Visualization
                 </h2>
                 
                 <div className="bg-white border rounded-lg p-4 flex justify-center">
-                  {generatedImage ? (
-                    <img 
-                      src={generatedImage} 
-                      alt="Generated clothing visualization" 
-                      className="max-w-full max-h-80"
-                      onError={(e) => {
-                        console.error('Failed to load generated image');
-                        e.target.src = '/api/placeholder/400/320';
-                        e.target.alt = 'Image could not be loaded';
-                      }}
-                    />
-                  ) : logoPreview ? (
-                    <div className="text-center">
-                      <img 
-                        src={logoPreview} 
-                        alt="Logo preview" 
-                        className="max-h-48 mx-auto"
-                      />
-                      <p className="text-sm text-gray-500 mt-2">
-                        Your logo will be placed on the {productConfig.logoPosition} of the {productConfig.clothingType}
-                      </p>
-                    </div>
-                  ) : null}
+                  <ClothingVisualizer 
+                    clothingType={productConfig.clothingType}
+                    color={productConfig.color === 'custom' ? productConfig.customColor : productConfig.color}
+                    logoImage={logoPreview}
+                    logoPosition={productConfig.logoPosition}
+                    logoSize={productConfig.logoSize}
+                  />
                 </div>
                 
-                {generatedImage && (
-                  <div className="mt-4 flex justify-center">
-                    <a 
-                      href={generatedImage}
-                      download="clothing-visualization.png"
-                      className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Download Visualization
-                    </a>
-                  </div>
-                )}
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">
+                    This is a 3D visualization of how your logo will appear on the {productConfig.clothingType}.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Actual product may vary slightly from visualization.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}
