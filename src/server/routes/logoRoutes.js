@@ -23,9 +23,23 @@ router.get('/test-direct', logoController.testStabilityDirect);
 // Generate logo route
 router.post('/generate', logoController.generateLogo);
 
+
 // Add the missing route for clothing visualization
 router.post('/visualize-clothing', logoController.generateClothingVisualization);
-
+// Add this after the generate route
+router.get('/check-s3', (req, res) => {
+  const s3Config = {
+    bucket: process.env.AWS_S3_BUCKET || 'ecommerce-website-generated-logo-2025',
+    region: process.env.AWS_REGION || 'us-east-1',
+    accessKeyConfigured: !!process.env.AWS_ACCESS_KEY_ID,
+    secretKeyConfigured: !!process.env.AWS_SECRET_ACCESS_KEY
+  };
+  
+  res.json({
+    message: 'S3 Configuration',
+    config: s3Config
+  });
+});
 // Other routes
 router.post('/upload', logoController.uploadLogo);
 router.get('/', logoController.getUserLogos);
