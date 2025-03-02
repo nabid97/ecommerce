@@ -70,7 +70,8 @@ const ImageGenerator = () => {
   - Background Color: ${config.backgroundColor}
   - Dimensions: ${config.size}
   ${config.additionalInstructions ? `- Additional Instructions: ${config.additionalInstructions}` : ''}
-  Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.`;
+  Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.
+  For Primary and Background Colors, the hex code numbers provided corrisponds to RGB colours`;
   };
   
 
@@ -373,17 +374,27 @@ const ImageGenerator = () => {
                 <div className="flex-1 border border-gray-200 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden min-h-64">
                   {generatedLogo ? (
                     <div className="relative w-full h-full flex items-center justify-center p-4">
-                      <img 
-                        src={generatedLogo} 
-                        alt="Generated Logo" 
-                        className="max-w-full max-h-64 object-contain"
-                        onError={(e) => {
-                          console.error('Image failed to load:', generatedLogo);
-                          e.target.onerror = null; 
-                          e.target.src = '/api/placeholder/400/320';
-                          setError('Error loading the generated logo image. Using placeholder instead.');
-                        }}
-                      />
+                     <img 
+                    src={generatedLogo} 
+                    alt="Generated Logo" 
+                    className="max-w-full max-h-64 object-contain"
+                    onError={(e) => {
+                      console.error('Image failed to load:', generatedLogo);
+                      e.target.onerror = null;
+                      
+                      // Try creating a full URL if the path is relative
+                      if (generatedLogo.startsWith('/')) {
+                        const baseUrl = window.location.origin;
+                        const fullUrl = `${baseUrl}${generatedLogo}`;
+                        console.log('Trying with full URL:', fullUrl);
+                        e.target.src = fullUrl;
+                      } else {
+                        // Fallback to placeholder
+                        e.target.src = '/api/placeholder/400/320';
+                        setError('Error loading the generated logo image. Using placeholder instead.');
+                      }
+                    }}
+                  />
                     </div>
                   ) : (
                     <div className="text-center p-8 text-gray-500">

@@ -6,16 +6,32 @@ const fs = require('fs');
 
 // Create directories for local storage fallback
 const createDirectories = () => {
-  const baseDir = path.join(__dirname, '../../../uploads');
+  const baseDir = path.join(__dirname, '../../uploads');
   const logosDir = path.join(baseDir, 'logos');
   const generatedDir = path.join(logosDir, 'generated');
   const uploadedDir = path.join(logosDir, 'uploaded');
   
+  console.log('Creating logo storage directories:');
+  console.log('- Base directory:', baseDir);
+  console.log('- Logos directory:', logosDir);
+  
   // Create directories if they don't exist
-  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
-  if (!fs.existsSync(logosDir)) fs.mkdirSync(logosDir, { recursive: true });
-  if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
-  if (!fs.existsSync(uploadedDir)) fs.mkdirSync(uploadedDir, { recursive: true });
+  if (!fs.existsSync(baseDir)) {
+    console.log('Creating base directory');
+    fs.mkdirSync(baseDir, { recursive: true });
+  }
+  if (!fs.existsSync(logosDir)) {
+    console.log('Creating logos directory');
+    fs.mkdirSync(logosDir, { recursive: true });
+  }
+  if (!fs.existsSync(generatedDir)) {
+    console.log('Creating generated logos directory');
+    fs.mkdirSync(generatedDir, { recursive: true });
+  }
+  if (!fs.existsSync(uploadedDir)) {
+    console.log('Creating uploaded logos directory');
+    fs.mkdirSync(uploadedDir, { recursive: true });
+  }
   
   return { baseDir, logosDir, generatedDir, uploadedDir };
 };

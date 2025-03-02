@@ -9,6 +9,19 @@ const path = require('path');
 const FormData = require('form-data');
 const s3Service = require('../services/s3Service');
 const { generatePreSignedUrl } = require('../../utils/LogoStorage');
+const generateFullUrl = (req, path) => {
+  
+  // Ensure the path starts with a /
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // For development environment
+  if (process.env.NODE_ENV === 'development') {
+    return `${req.protocol}://${req.get('host')}${cleanPath}`;
+  }
+  
+  // For production, you might want to use a configured base URL
+  return cleanPath;
+};
 
 
 // Configure AWS S3
@@ -48,9 +61,10 @@ const logoController = {
     const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
       in ${config.font || 'Arial'} font style. 
       Main color ${config.color || '#000000'}, 
-      background color ${config.backgroundColor || '#FFFFFF'}. 
-      Clean, minimalist, business-appropriate logo. 
-      High resolution, vector-style graphic.`;
+      background color ${config.backgroundColor || '#FFFFFF'}Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.
+      For Primary and Background Colors, the hex code numbers provided corrisponds to RGB colours. 
+      High resolution. 
+    `;
 
     console.log('Logo Generation Prompt:', logoPrompt);
 
@@ -96,36 +110,39 @@ if (imageUrl.startsWith('data:image')) {
     const buffer = Buffer.from(base64Data, 'base64');
     
     // Upload to S3 if configured
-    if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
-      const uploadResult = await s3Service.uploadFile({
-        buffer: buffer,
-        originalname: `logo-${Date.now()}.png`,
-        mimetype: mimeType || 'image/png'
-      }, 'logos/generated');
+    // Upload to S3 if configured
+if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+  const filename = `logo-${Date.now()}.png`; // Add this line to define filename
+  const uploadResult = await s3Service.uploadFile({
+    buffer: buffer,
+    originalname: filename,
+    mimetype: mimeType || 'image/png'
+  }, 'logos/generated');
 
-      logoData = {
-        imageUrl: uploadResult.url,
-        s3Key: uploadResult.key
-      };
-      console.log('Base64 image uploaded to S3:', uploadResult.url);
-    } else {
-      // Save locally if S3 is not configured
-      const uploadsDir = path.join(__dirname, '../../uploads/logos');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      
-      const filename = `logo-${Date.now()}.png`;
-      const filePath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filePath, buffer);
-      
-      logoData = {
-        imageUrl: `/uploads/logos/${filename}`,
-        s3Key: `logos/generated/${filename}` // Set a meaningful S3 key even for local storage
-      };
-      console.log('Base64 image saved locally:', logoData.imageUrl);
-    }
-  } catch (uploadError) {
+  logoData = {
+    imageUrl: generateFullUrl(req, `/uploads/logos/${filename}`),
+    s3Key: `logos/generated/${filename}`
+  };
+  console.log('Base64 image uploaded to S3:', uploadResult.url);
+} else {
+  // Save locally if S3 is not configured
+  const uploadsDir = path.join(__dirname, '../../uploads/logos');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  
+  const filename = `logo-${Date.now()}.png`;
+  const filePath = path.join(uploadsDir, filename);
+  fs.writeFileSync(filePath, buffer);
+  
+  logoData = {
+    imageUrl: generateFullUrl(req, `/uploads/logos/${filename}`),
+    s3Key: `logos/generated/${filename}`
+  };
+  console.log('Base64 image saved locally:', logoData.imageUrl);
+}
+  }
+   catch (uploadError) {
     console.error('Error processing base64 image:', uploadError);
     logoData = {
       imageUrl: imageUrl,
@@ -153,7 +170,7 @@ if (imageUrl.startsWith('data:image')) {
       };
     } else {
       // Save locally if S3 is not configured
-      const uploadsDir = path.join(__dirname, '../../uploads/logos');
+      const uploadsDir = path.join(__dirname, '../../../uploads/logos');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
@@ -491,7 +508,7 @@ return res.status(200).json({
               fs.writeFileSync(filePath, Buffer.from(imageResponse.data));
               
               imageData = {
-                imageUrl: `/uploads/visualizations/${filename}`,
+                imageUrl: generateFullUrl(req, `/uploads/visualizations/${filename}`),
                 s3Key: null
               };
             }

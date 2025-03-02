@@ -53,6 +53,9 @@ app.use('/assets', express.static(path.join(__dirname, 'src', 'assets')));
 app.use('/fabric-images', express.static(path.join(__dirname, 'src', 'assets', 'fabricimages')));
 console.log('Serving fabric images from:', path.join(__dirname, 'src', 'assets', 'fabricimages'));
 const clothingRoutes = require(path.join(__dirname, 'src/server/routes/clothingRoutes'));
+app.use('/uploads', express.static(path.join(__dirname, 'src', 'uploads')));
+console.log('Serving uploads from:', path.join(__dirname, 'src', 'uploads'));
+
 
 // Detailed request logging middleware
 app.use((req, res, next) => {
