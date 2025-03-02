@@ -34,3 +34,5 @@ build/
 # Ignore secrets.json file
 secrets.json
 src/secrets.json
+src/uploads 
+/aws

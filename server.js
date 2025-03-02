@@ -1,13 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 
-// Environment variables check
+
+// Environment variables check 
 console.log('\n====== ENVIRONMENT VARIABLES CHECK ======');
 console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
 console.log(`PORT: ${process.env.PORT || 'not set'}`);

@@ -4,7 +4,7 @@ const logoSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    // Make userId optional by removing required: true
   },
   imageUrl: {
     type: String,
@@ -12,7 +12,7 @@ const logoSchema = new mongoose.Schema({
   },
   s3Key: {
     type: String,
-    required: true
+    // Make s3Key optional by removing required: true
   },
   config: {
     text: String,

@@ -1,4 +1,5 @@
 // src/server/controllers/logoController.js
+const mongoose = require('mongoose');
 const Logo = require('../models/Logo');
 const stabilityService = require('../services/stabilityService');
 const AWS = require('aws-sdk');
@@ -7,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
 const s3Service = require('../services/s3Service');
-const { generatePreSignedUrl } = require('../utils/LogoStorage');
+const { generatePreSignedUrl } = require('../../utils/LogoStorage');
 
 
 // Configure AWS S3
@@ -18,165 +19,219 @@ const s3 = new AWS.S3({
 });
 
 const logoController = {
-  // Create Logo (Generate)
-  generateLogo: async (req, res) => {
-    try {
-      console.log('\n====== LOGO GENERATION REQUEST ======');
-      console.log('Request Body:', JSON.stringify(req.body, null, 2));
-      
-      const { prompt, config } = req.body;
-  
-      // Validate input
-      if (!config || !config.text) {
-        return res.status(400).json({ 
-          message: 'Logo text is required',
-          receivedBody: req.body 
-        });
-      }
-  
-      // Get user ID from authentication context
-      // If no user is authenticated, it will pass null
-      const userId = req.user ? req.user._id : null;
-  
-      // Construct detailed prompt for logo generation
-      const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
-        in ${config.font || 'Arial'} font style. 
-        Main color ${config.color || '#000000'}, 
-        background color ${config.backgroundColor || '#FFFFFF'}. 
-        Clean, minimalist, business-appropriate logo. 
-        High resolution, vector-style graphic.`;
-  
-      console.log('Logo Generation Prompt:', logoPrompt);
-  
-      try {
-        // Generate logo using Stability AI
-        const generatedImage = await stabilityService.generateImage(logoPrompt, {
-          size: "1024x1024"
-        });
-  
-        console.log('Generation Response:', {
-          hasData: !!generatedImage.data,
-          dataLength: generatedImage.data?.length,
-          hasUrl: !!generatedImage.data?.[0]?.url,
-          urlStart: generatedImage.data?.[0]?.url?.substring(0, 30) + '...' // Just log the start of the URL
-        });
-  
-        // Validate image generation
-        if (!generatedImage.data || !generatedImage.data[0]?.url) {
-          console.error('Invalid response:', generatedImage);
-          return res.status(500).json({ 
-            message: 'Failed to generate logo',
-            details: 'Invalid response from image generation service'
-          });
-        }
-  
-        let imageUrl = generatedImage.data[0].url;
-        let logoData;
-        
-        // Handle base64 data URLs
-        if (imageUrl.startsWith('data:image')) {
-          console.log('Image is base64, using directly');
-          logoData = {
-            imageUrl: imageUrl,
-            s3Key: null // No S3 key for base64 data
-          };
-        } else {
-          try {
-            // Download image using axios
-            const imageResponse = await axios.get(imageUrl, { 
-              responseType: 'arraybuffer' 
-            });
-  
-            // Upload to S3 if configured
-            if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
-              const uploadResult = await s3Service.uploadFile({
-                buffer: Buffer.from(imageResponse.data),
-                originalname: `logo-${Date.now()}.png`,
-                mimetype: 'image/png'
-              }, 'logos/generated');
-  
-              logoData = {
-                imageUrl: uploadResult.url,
-                s3Key: uploadResult.key
-              };
-            } else {
-              // Save locally if S3 is not configured
-              const uploadsDir = path.join(__dirname, '../../uploads/logos');
-              if (!fs.existsSync(uploadsDir)) {
-                fs.mkdirSync(uploadsDir, { recursive: true });
-              }
-              
-              const filename = `logo-${Date.now()}.png`;
-              const filePath = path.join(uploadsDir, filename);
-              fs.writeFileSync(filePath, Buffer.from(imageResponse.data));
-              
-              logoData = {
-                imageUrl: `/uploads/logos/${filename}`,
-                s3Key: null
-              };
-            }
-          } catch (downloadError) {
-            console.error('Error downloading/saving image:', downloadError);
-            
-            // Still use the direct URL if download/upload failed
-            logoData = {
-              imageUrl: imageUrl,
-              s3Key: null
-            };
-          }
-        }
-  
-        // Save to database if possible
-        try {
-          const logo = new Logo({
-            imageUrl: logoData.imageUrl,
-            s3Key: logoData.s3Key,
-            config: config,
-            prompt: logoPrompt,
-            type: 'generated',
-            status: 'completed',
-            userId: userId // Pass the user ID when saving to database
-          });
-  
-          await logo.save();
-          console.log('Logo saved to database with ID:', logo._id);
-        } catch (dbError) {
-          console.error('Database error (non-fatal):', dbError);
-          // Continue even if DB save fails
-        }
-  
-        // Return response
-        return res.status(200).json({
-          imageUrl: logoData.imageUrl,
-          message: 'Logo generated successfully',
-          config: config
-        });
-  
-      } catch (stabilityError) {
-        console.error('Image Generation Error:', {
-          message: stabilityError.message,
-          stack: stabilityError.stack
-        });
-  
-        return res.status(500).json({
-          message: 'Failed to generate logo with Stability AI',
-          error: stabilityError.message
-        });
-      }
-  
-    } catch (error) {
-      console.error('Comprehensive Logo Generation Error:', {
-        message: error.message,
-        stack: error.stack
-      });
-  
-      res.status(500).json({ 
-        message: 'Unexpected error generating logo',
-        error: error.message
+
+ generateLogo: async (req, res) => {
+  try {
+    console.log('\n====== LOGO GENERATION REQUEST ======');
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+    
+    // Debug environment variables
+    console.log('Environment Variables:');
+    if (process.env.STABILITY_API_KEY) {
+      const key = process.env.STABILITY_API_KEY;
+      console.log(`STABILITY_API_KEY: ${key.substring(0, 5)}...${key.substring(key.length - 3)}`);
+    } else {
+      console.log('STABILITY_API_KEY: not set');
+    }
+
+    const { prompt, config } = req.body;
+
+    // Validate input
+    if (!config || !config.text) {
+      return res.status(400).json({ 
+        message: 'Logo text is required',
+        receivedBody: req.body 
       });
     }
-  },
+
+    // Construct detailed prompt for logo generation
+    const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
+      in ${config.font || 'Arial'} font style. 
+      Main color ${config.color || '#000000'}, 
+      background color ${config.backgroundColor || '#FFFFFF'}. 
+      Clean, minimalist, business-appropriate logo. 
+      High resolution, vector-style graphic.`;
+
+    console.log('Logo Generation Prompt:', logoPrompt);
+
+    try {
+      // Generate logo using Stability AI
+      const generatedImage = await stabilityService.generateImage(logoPrompt, {
+        size: "1024x1024"
+      });
+
+      console.log('Generation Response:', {
+        hasData: !!generatedImage.data,
+        dataLength: generatedImage.data?.length,
+        hasUrl: !!generatedImage.data?.[0]?.url,
+        urlStart: generatedImage.data?.[0]?.url?.substring(0, 30) + '...' // Just log the start of the URL
+      });
+
+      // Validate image generation
+      if (!generatedImage.data || !generatedImage.data[0]?.url) {
+        console.error('Invalid response:', generatedImage);
+        return res.status(500).json({ 
+          message: 'Failed to generate logo',
+          details: 'Invalid response from image generation service'
+        });
+      }
+
+      let imageUrl = generatedImage.data[0].url;
+      let logoData;
+      
+      // Handle base64 data URLs
+if (imageUrl.startsWith('data:image')) {
+  console.log('Image is base64, processing for upload...');
   
+  try {
+    // Extract the base64 data and determine mimetype
+    const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    
+    if (!matches || matches.length !== 3) {
+      throw new Error('Invalid base64 format');
+    }
+    
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Upload to S3 if configured
+    if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+      const uploadResult = await s3Service.uploadFile({
+        buffer: buffer,
+        originalname: `logo-${Date.now()}.png`,
+        mimetype: mimeType || 'image/png'
+      }, 'logos/generated');
+
+      logoData = {
+        imageUrl: uploadResult.url,
+        s3Key: uploadResult.key
+      };
+      console.log('Base64 image uploaded to S3:', uploadResult.url);
+    } else {
+      // Save locally if S3 is not configured
+      const uploadsDir = path.join(__dirname, '../../uploads/logos');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const filename = `logo-${Date.now()}.png`;
+      const filePath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      
+      logoData = {
+        imageUrl: `/uploads/logos/${filename}`,
+        s3Key: `logos/generated/${filename}` // Set a meaningful S3 key even for local storage
+      };
+      console.log('Base64 image saved locally:', logoData.imageUrl);
+    }
+  } catch (uploadError) {
+    console.error('Error processing base64 image:', uploadError);
+    logoData = {
+      imageUrl: imageUrl,
+      s3Key: `placeholder-${Date.now()}` // Use a timestamp-based placeholder
+    };
+  }
+} else {
+  try {
+    // Download image using axios
+    const imageResponse = await axios.get(imageUrl, { 
+      responseType: 'arraybuffer' 
+    });
+
+    // Upload to S3 if configured
+    if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+      const uploadResult = await s3Service.uploadFile({
+        buffer: Buffer.from(imageResponse.data),
+        originalname: `logo-${Date.now()}.png`,
+        mimetype: 'image/png'
+      }, 'logos/generated');
+
+      logoData = {
+        imageUrl: uploadResult.url,
+        s3Key: uploadResult.key
+      };
+    } else {
+      // Save locally if S3 is not configured
+      const uploadsDir = path.join(__dirname, '../../uploads/logos');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const filename = `logo-${Date.now()}.png`;
+      const filePath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filePath, Buffer.from(imageResponse.data));
+      
+      logoData = {
+        imageUrl: `/uploads/logos/${filename}`,
+        s3Key: `logos/generated/${filename}` // Set a meaningful S3 key even for local storage
+      };
+    }
+  } catch (downloadError) {
+    console.error('Error downloading/saving image:', downloadError);
+    
+    // Still use the direct URL if download/upload failed
+    logoData = {
+      imageUrl: imageUrl,
+      s3Key: `placeholder-${Date.now()}` // Use a timestamp-based placeholder
+    };
+  }
+}
+
+// Try to save to database (now with better error handling)
+try {
+  // Get user ID - either from logged in user or create a temp one
+  const userId = req.user ? req.user._id : new mongoose.Types.ObjectId();
+  
+  // Create logo document with all required fields
+  const logo = new Logo({
+    imageUrl: logoData.imageUrl,
+    s3Key: logoData.s3Key, // Will now always have a value
+    userId: userId,
+    prompt: logoPrompt,
+    type: 'generated',
+    status: 'completed'
+  });
+
+  await logo.save();
+  console.log('Logo saved to database with ID:', logo._id);
+} catch (dbError) {
+  // If database save fails, log the error but continue
+  console.error('Database save error (non-fatal):', dbError);
+  console.log('Continuing without saving to database...');
+}
+
+// Return response whether database save worked or not
+return res.status(200).json({
+  imageUrl: logoData.imageUrl,
+  message: 'Logo generated successfully',
+  config: config
+});
+
+    } catch (stabilityError) {
+      console.error('Image Generation Error:', {
+        message: stabilityError.message,
+        stack: stabilityError.stack
+      });
+
+      return res.status(500).json({
+        message: 'Failed to generate logo with Stability AI',
+        error: stabilityError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('Comprehensive Logo Generation Error:', {
+      message: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({ 
+      message: 'Unexpected error generating logo',
+      error: error.message
+    });
+  }
+},
 
   // Test endpoint for Stability API
   generateLogoTest: async (req, res) => {

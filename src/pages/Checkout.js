@@ -1,16 +1,18 @@
+// In your Checkout.js component file
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Card, CardContent } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { useCart } from '../contexts/CartContext';
 
-// IMPORTANT: Replace this with your actual publishable key
-// Do not use variables, just paste your key directly as a string
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY); // ← Replace with your actual publishable key
+// Import from the separate file instead of initializing here
+import stripePromise from '../utils/stripeLoader';
 
-// Stripe payment form component
+// Simple checker to verify things are loading correctly
+console.log('[Checkout] Stripe promise loaded:', !!stripePromise);
+
 const CheckoutForm = ({ clientSecret, orderData, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -22,6 +24,7 @@ const CheckoutForm = ({ clientSecret, orderData, onSuccess }) => {
 
     if (!stripe || !elements) {
       // Stripe.js has not loaded yet
+      setError("Stripe hasn't loaded yet. Please try again in a moment.");
       return;
     }
 
@@ -54,7 +57,7 @@ const CheckoutForm = ({ clientSecret, orderData, onSuccess }) => {
         onSuccess(result.paymentIntent);
       }
     } catch (err) {
-      setError('An error occurred while processing your payment.');
+      setError('An error occurred while processing your payment: ' + err.message);
       console.error('Payment error:', err);
     } finally {
       setLoading(false);
@@ -193,8 +196,7 @@ const Checkout = () => {
     setError('');
 
     try {
-      // Make sure this URL matches your server route - use the full URL to avoid any path issues
-      console.log('Creating payment intent for items:', cart);
+      console.log('[Checkout] Creating payment intent for items:', cart);
       
       const response = await fetch('http://localhost:5000/api/create-payment-intent', {
         method: 'POST',
@@ -225,7 +227,12 @@ const Checkout = () => {
       }
 
       const data = await response.json();
-      console.log('Payment intent created successfully:', data);
+      console.log('[Checkout] Payment intent created successfully:', data);
+      
+      if (!data.clientSecret) {
+        throw new Error('No client secret received from server');
+      }
+      
       setClientSecret(data.clientSecret);
       
       // Store the order data for creating the order after payment
@@ -239,7 +246,7 @@ const Checkout = () => {
       });
       
     } catch (err) {
-      console.error('Error creating payment intent:', err);
+      console.error('[Checkout] Error creating payment intent:', err);
       setError(err.message || 'Failed to initialize payment');
     } finally {
       setPageLoading(false);
@@ -248,7 +255,7 @@ const Checkout = () => {
 
   const handlePaymentSuccess = async (paymentIntent) => {
     try {
-      console.log('Payment successful, creating order...', paymentIntent);
+      console.log('[Checkout] Payment successful, creating order...', paymentIntent);
       
       // Create the final order with payment information
       const response = await fetch('http://localhost:5000/api/orders', {
@@ -275,12 +282,12 @@ const Checkout = () => {
   
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Order creation response error:', errorData);
+        console.error('[Checkout] Order creation response error:', errorData);
         throw new Error(errorData.message || 'Failed to create order');
       }
   
       const orderResponse = await response.json();
-      console.log('Order created successfully:', orderResponse);
+      console.log('[Checkout] Order created successfully:', orderResponse);
       
       // Clear the cart
       clearCart();
@@ -289,7 +296,7 @@ const Checkout = () => {
       navigate(`/order-confirmation?orderId=${orderResponse.orderId || orderResponse._id || Date.now()}`);
       
     } catch (err) {
-      console.error('Error creating order:', err);
+      console.error('[Checkout] Error creating order:', err);
       setError('Your payment was successful, but we had trouble creating your order. Please contact support.');
     }
   };
@@ -363,7 +370,13 @@ const Checkout = () => {
             <Card>
               <CardContent>
                 <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <Elements 
+                  stripe={stripePromise} 
+                  options={{ 
+                    clientSecret,
+                    appearance: { theme: 'stripe' }
+                  }}
+                >
                   <CheckoutForm 
                     clientSecret={clientSecret} 
                     orderData={orderData}

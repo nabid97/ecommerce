@@ -23,6 +23,13 @@ const Navigation = () => {
               Fabrics
             </Link>
             <Link
+              to="/clothing"
+              className="px-3 py-2 rounded-md text-gray-700 hover:text-gray-900"
+              data-testid="clothing-link"
+            >
+              Clothing
+            </Link>
+            <Link
               to="/image-generator"
               className="px-3 py-2 rounded-md text-gray-700 hover:text-gray-900"
               data-testid="logo-generator-link"

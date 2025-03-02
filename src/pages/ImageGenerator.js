@@ -94,20 +94,35 @@ const ImageGenerator = () => {
 
       if (response?.imageUrl) {
         // Verify the URL is valid before setting it
-        try {
-          // Test if URL is valid
-          new URL(response.imageUrl);
+        if (response.imageUrl.startsWith('data:image')) {
+          // Direct base64 data URL - can be used as is
           setGeneratedLogo(response.imageUrl);
-        } catch (urlError) {
-          console.error('Invalid image URL received:', response.imageUrl);
-          
-          // Fall back to local placeholder if URL is invalid
-          setGeneratedLogo('/logo-placeholder.svg');
-          setError('Generated logo URL was invalid. Using placeholder instead.');
+        }
+        else if (response.imageUrl.startsWith('/')) {
+          // Relative URL from server - prepend with base URL
+          const baseUrl = window.location.origin;
+          const fullUrl = `${baseUrl}${response.imageUrl}`;
+          console.log('Converting relative URL to full URL:', fullUrl);
+          setGeneratedLogo(fullUrl);
+        }
+        else {
+          // External URL - validate
+          try {
+            // Test if URL is valid
+            new URL(response.imageUrl);
+            setGeneratedLogo(response.imageUrl);
+          } catch (urlError) {
+            console.error('Invalid image URL received:', response.imageUrl);
+            
+            // Fall back to local placeholder if URL is invalid
+            setGeneratedLogo('/logo-placeholder.svg');
+            setError('Generated logo URL was invalid. Using placeholder instead.');
+          }
         }
       } else {
         throw new Error('Failed to generate logo');
       }
+
     } catch (err) {
       console.error('Detailed logo generation error:', err);
       
