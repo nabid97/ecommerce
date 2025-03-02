@@ -172,6 +172,7 @@ if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
       // Save locally if S3 is not configured
       const uploadsDir = path.join(__dirname, '../../../uploads/logos');
       if (!fs.existsSync(uploadsDir)) {
+        console.log('Creating directory:', uploadsDir);
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
       

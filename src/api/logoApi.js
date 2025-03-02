@@ -1,11 +1,15 @@
-import api from '../utils/api';
+//import api from '../utils/api';
+import axios from 'axios';
+
+// Define the API base URL - connect directly to the backend server
+const API_BASE_URL = 'http://localhost:5000/api';
 
 export const logoApi = {
   generateLogo: async (config) => {
     try {
       console.log('Logo Generation Request Config:', config);
 
-      // Construct prompt
+      // Construct prompt for the logo
       const prompt = `Create a professional ${config.style || 'modern'} logo design with text "${config.text}" 
         in ${config.font || 'Arial'} font style. 
         Main color ${config.color || '#000000'}, 
@@ -26,7 +30,12 @@ export const logoApi = {
 
       console.log('Sending logo generation request:', requestData);
 
-      const response = await api.post('/logos/generate', requestData);
+      // Use axios directly with the full URL to ensure proper connection
+      const response = await axios.post(`${API_BASE_URL}/logos/generate`, requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
 
       console.log('Logo Generation API Response:', response.data);
       return response.data;
@@ -51,7 +60,7 @@ export const logoApi = {
       formData.append('bucketName', 'ecommerce-website-generated-logo-2025');
       formData.append('saveToUserProfile', 'true');
 
-      const response = await api.post('/logos/upload', formData, {
+      const response = await axios.post(`${API_BASE_URL}/logos/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -66,7 +75,7 @@ export const logoApi = {
   // Get user's stored logos
   getUserLogos: async () => {
     try {
-      const response = await api.get('/logos/user');
+      const response = await axios.get(`${API_BASE_URL}/logos/user`);
       return response.data;
     } catch (error) {
       console.error('Error fetching user logos:', error);
@@ -78,7 +87,7 @@ export const logoApi = {
   getLogos: async () => {
     try {
       console.log('Fetching logos from API');
-      const response = await api.get('/logos');
+      const response = await axios.get(`${API_BASE_URL}/logos`);
       console.log('Logo API response:', response.data);
       return response.data;
     } catch (error) {
@@ -90,14 +99,13 @@ export const logoApi = {
   // Delete a logo
   deleteLogo: async (logoId) => {
     try {
-      const response = await api.delete(`/logos/${logoId}`);
+      const response = await axios.delete(`${API_BASE_URL}/logos/${logoId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting logo:', error);
       throw error;
     }
   },
-
-  // Update logo metadata
-  
 };
+
+export default logoApi;

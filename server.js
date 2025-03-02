@@ -53,7 +53,14 @@ app.use('/assets', express.static(path.join(__dirname, 'src', 'assets')));
 app.use('/fabric-images', express.static(path.join(__dirname, 'src', 'assets', 'fabricimages')));
 console.log('Serving fabric images from:', path.join(__dirname, 'src', 'assets', 'fabricimages'));
 const clothingRoutes = require(path.join(__dirname, 'src/server/routes/clothingRoutes'));
-app.use('/uploads', express.static(path.join(__dirname, 'src', 'uploads')));
+// Add static file serving for uploads directory with CORS headers
+app.use('/uploads', (req, res, next) => {
+  // Add CORS headers specifically for static files
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'src', 'uploads')));
 console.log('Serving uploads from:', path.join(__dirname, 'src', 'uploads'));
 
 
