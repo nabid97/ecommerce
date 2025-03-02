@@ -60,8 +60,8 @@ const logoController = {
     // Construct detailed prompt for logo generation
     const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
       in ${config.font || 'Arial'} font style. 
-      Main color ${config.color || '#000000'}, 
-      background color ${config.backgroundColor || '#FFFFFF'}Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.
+      Main color (RGB Hex code) ${config.color || '#000000'}, 
+      background color (RGB Hex code) ${config.backgroundColor || '#FFFFFF'}Ensure the design is clean, minimalistic, and suitable for business use, do not include any extraneous elements or random text.
       For Primary and Background Colors, the hex code numbers provided corrisponds to RGB colours. 
       High resolution. 
     `;
