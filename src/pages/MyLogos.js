@@ -16,26 +16,35 @@ const MyLogos = () => {
     fetchLogos();
   }, []);
 
-  const fetchLogos = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await logoApi.getLogos();
-      console.log('Fetched logos:', response);
-      
-      if (response.logos) {
-        setLogos(response.logos);
-      } else {
-        setLogos([]);
-      }
-    } catch (err) {
-      console.error('Error fetching logos:', err);
-      setError('Failed to load your logos. Please try again later.');
-    } finally {
+  // In src/pages/MyLogos.js
+const fetchLogos = async () => {
+  try {
+    // Only attempt to fetch if user is logged in
+    if (!user) {
+      setLogos([]);
       setLoading(false);
+      return;
     }
-  };
+
+    setLoading(true);
+    setError(null);
+    
+    // Make sure you're calling the right API method
+    const response = await logoApi.getUserLogos();  // Not getLogos()
+    console.log('Fetched logos:', response);
+    
+    if (response.logos) {
+      setLogos(response.logos);
+    } else {
+      setLogos([]);
+    }
+  } catch (err) {
+    console.error('Error fetching logos:', err);
+    setError('Failed to load your logos. Please try again later.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDelete = async (logoId) => {
     try {

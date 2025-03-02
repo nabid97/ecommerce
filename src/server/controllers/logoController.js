@@ -40,10 +40,15 @@ const s3 = new AWS.S3({
 
 const logoController = {
 
- generateLogo: async (req, res) => {
+// Complete generateLogo function for src/server/controllers/logoController.js
+
+generateLogo: async (req, res) => {
   try {
     console.log('\n====== LOGO GENERATION REQUEST ======');
     console.log('Request Body:', JSON.stringify(req.body, null, 2));
+    
+    // Log authentication status
+    console.log('Authentication Status:', req.user ? `Authenticated as ${req.user._id}` : 'Not authenticated');
     
     // Debug environment variables
     console.log('Environment Variables:');
@@ -68,8 +73,9 @@ const logoController = {
     const logoPrompt = prompt || `A professional ${config.style || 'modern'} logo design with text "${config.text}" 
       in ${config.font || 'Arial'} font style. 
       Main color (RGB Hex code) ${config.color || '#000000'}, 
-      background color (RGB Hex code) ${config.backgroundColor || '#FFFFFF'}Ensure the design is clean, minimalistic, and suitable for business use, do not include any extraneous elements or random text.
-      For Primary and Background Colors, the hex code numbers provided corrisponds to RGB colours. 
+      background color (RGB Hex code) ${config.backgroundColor || '#FFFFFF'}.
+      Ensure the design is clean, minimalistic, and suitable for business use, do not include any extraneous elements or random text.
+      For Primary and Background Colors, the hex code numbers provided correspond to RGB colours. 
       High resolution. 
     `;
 
@@ -110,128 +116,170 @@ const logoController = {
           
           if (!matches || matches.length !== 3) {
             throw new Error('Invalid base64 format');
-            
           }
           
           const mimeType = matches[1];
           const base64Data = matches[2];
           const buffer = Buffer.from(base64Data, 'base64');
+          
+          // Create a unique filename that includes timestamp
+          const timestamp = Date.now();
+          const filename = `logo-${timestamp}.png`;
     
-    // Upload to S3 if configured
-    // Upload to S3 if configured
-if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
-  const filename = `logo-${Date.now()}.png`; // Add this line to define filename
-  const uploadResult = await s3Service.uploadFile({
-    buffer: buffer,
-    originalname: filename,
-    mimetype: mimeType || 'image/png'
-  }, 'logos/generated');
+          // Upload to S3 if configured
+          if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+            const uploadResult = await s3Service.uploadFile({
+              buffer: buffer,
+              originalname: filename,
+              mimetype: mimeType || 'image/png'
+            }, 'logos/generated');
 
-  logoData = {
-    imageUrl: generateFullUrl(req, `/uploads/logos/${filename}`),
-    s3Key: `logos/generated/${filename}`
-  };
-  console.log('Base64 image uploaded to S3:', uploadResult.url);
-} else {
-  // Save locally if S3 is not configured
-  const uploadsDir = path.join(__dirname, '../../uploads/logos');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  
-  const filename = `logo-${Date.now()}.png`;
-  const filePath = path.join(uploadsDir, filename);
-  fs.writeFileSync(filePath, buffer);
-  
-  logoData = {
-    imageUrl: generateFullUrl(req, `/uploads/logos/${filename}`),
-    s3Key: `logos/generated/${filename}`
-  };
-  console.log('Base64 image saved locally:', logoData.imageUrl);
-}
-  }
-   catch (uploadError) {
-    console.error('Error processing base64 image:', uploadError);
-    logoData = {
-      imageUrl: imageUrl,
-      s3Key: `placeholder-${Date.now()}` // Use a timestamp-based placeholder
-    };
-  }
-} else {
-  try {
-    // Download image using axios
-    const imageResponse = await axios.get(imageUrl, { 
-      responseType: 'arraybuffer' 
-    });
+            console.log('S3 upload result:', uploadResult);
 
-    // Upload to S3 if configured
-    if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
-      const uploadResult = await s3Service.uploadFile({
-        buffer: Buffer.from(imageResponse.data),
-        originalname: `logo-${Date.now()}.png`,
-        mimetype: 'image/png'
-      }, 'logos/generated');
+            // ALSO save a local copy for fallback
+            // Create local directory if it doesn't exist
+            const localUploadsDir = path.join(__dirname, '../../../uploads/logos/generated');
+            ensureDirectoryExists(localUploadsDir);
+            
+            // Save the file locally
+            const localFilePath = path.join(localUploadsDir, filename);
+            fs.writeFileSync(localFilePath, buffer);
+            
+            console.log('Also saved image locally at:', localFilePath);
+            
+            // Set both URLs for the response
+            logoData = {
+              imageUrl: uploadResult.url,  // S3 URL
+              localUrl: `/uploads/logos/generated/${filename}`, // Local URL path
+              s3Key: uploadResult.key
+            };
+            
+            console.log('Logo data prepared:', {
+              s3Url: logoData.imageUrl,
+              localUrl: logoData.localUrl
+            });
+          } else {
+            // Save locally if S3 is not configured
+            const uploadsDir = path.join(__dirname, '../../../uploads/logos/generated');
+            ensureDirectoryExists(uploadsDir);
+            
+            const localFilePath = path.join(uploadsDir, filename);
+            fs.writeFileSync(localFilePath, buffer);
+            
+            // Set local URL path for the response
+            logoData = {
+              imageUrl: `/uploads/logos/generated/${filename}`, // Only local URL
+              localUrl: `/uploads/logos/generated/${filename}`, // Same as imageUrl
+              s3Key: null
+            };
+            
+            console.log('Image saved locally, URL path:', logoData.imageUrl);
+          }
+        } catch (uploadError) {
+          console.error('Error processing base64 image:', uploadError);
+          
+          // As a fallback, just return the base64 data directly
+          logoData = {
+            imageUrl: imageUrl, // Use the base64 data as the image URL
+            localUrl: null,
+            s3Key: null
+          };
+          
+          console.log('Falling back to direct base64 data');
+        }
+      } else {
+        // Handle regular URL response (not base64)
+        try {
+          // Download image using axios
+          const imageResponse = await axios.get(imageUrl, { 
+            responseType: 'arraybuffer' 
+          });
 
-      logoData = {
-        imageUrl: uploadResult.url,
-        s3Key: uploadResult.key
-      };
-    } else {
-      // Save locally if S3 is not configured
-      const uploadsDir = path.join(__dirname, '../../../uploads/logos');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
+          // Create a filename with timestamp
+          const timestamp = Date.now();
+          const filename = `logo-${timestamp}.png`;
+
+          // Upload to S3 if configured
+          if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
+            const uploadResult = await s3Service.uploadFile({
+              buffer: Buffer.from(imageResponse.data),
+              originalname: filename,
+              mimetype: 'image/png'
+            }, 'logos/generated');
+
+            // ALSO save a local copy for fallback
+            const localUploadsDir = path.join(__dirname, '../../../uploads/logos/generated');
+            ensureDirectoryExists(localUploadsDir);
+            
+            const localFilePath = path.join(localUploadsDir, filename);
+            fs.writeFileSync(localFilePath, Buffer.from(imageResponse.data));
+            
+            console.log('Also saved image locally at:', localFilePath);
+
+            logoData = {
+              imageUrl: uploadResult.url,  // S3 URL
+              localUrl: `/uploads/logos/generated/${filename}`, // Local URL path
+              s3Key: uploadResult.key
+            };
+          } else {
+            // Save locally if S3 is not configured
+            const uploadsDir = path.join(__dirname, '../../../uploads/logos/generated');
+            ensureDirectoryExists(uploadsDir);
+            
+            const localFilePath = path.join(uploadsDir, filename);
+            fs.writeFileSync(localFilePath, Buffer.from(imageResponse.data));
+            
+            logoData = {
+              imageUrl: `/uploads/logos/generated/${filename}`,
+              localUrl: `/uploads/logos/generated/${filename}`,
+              s3Key: null
+            };
+          }
+        } catch (downloadError) {
+          console.error('Error downloading/saving image:', downloadError);
+          
+          // Still use the direct URL if download/upload failed
+          logoData = {
+            imageUrl: imageUrl,
+            localUrl: null,
+            s3Key: null
+          };
+        }
       }
-      
-      const filename = `logo-${Date.now()}.png`;
-      const filePath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filePath, Buffer.from(imageResponse.data));
-      
-      logoData = {
-        imageUrl: `/uploads/logos/${filename}`,
-        s3Key: `logos/generated/${filename}` // Set a meaningful S3 key even for local storage
-      };
-    }
-  } catch (downloadError) {
-    console.error('Error downloading/saving image:', downloadError);
-    
-    // Still use the direct URL if download/upload failed
-    logoData = {
-      imageUrl: imageUrl,
-      s3Key: `placeholder-${Date.now()}` // Use a timestamp-based placeholder
-    };
-  }
-}
 
-// Try to save to database (now with better error handling)
-try {
-  // Get user ID - either from logged in user or create a temp one
-  const userId = req.user ? req.user._id : new mongoose.Types.ObjectId();
-  
-  // Create logo document with all required fields
-  const logo = new Logo({
-    imageUrl: logoData.imageUrl,
-    s3Key: logoData.s3Key, // Will now always have a value
-    userId: userId,
-    prompt: logoPrompt,
-    type: 'generated',
-    status: 'completed'
-  });
+      // Try to save to database (now with better error handling)
+      try {
+        // *** IMPORTANT: Get user ID from the authenticated user ***
+        // This is the key point for fixing the "My Logos" issue
+        const userId = req.user ? req.user._id : null;
+        console.log("Saving logo for user:", userId ? userId.toString() : "Anonymous (no user ID)");
+        
+        // Create logo document with all required fields
+        const logo = new Logo({
+          imageUrl: logoData.imageUrl,
+          s3Key: logoData.s3Key,
+          userId: userId,  // This associates the logo with the user
+          prompt: logoPrompt,
+          type: 'generated',
+          status: 'completed',
+          config: config // Save the configuration for future reference
+        });
 
-  await logo.save();
-  console.log('Logo saved to database with ID:', logo._id);
-} catch (dbError) {
-  // If database save fails, log the error but continue
-  console.error('Database save error (non-fatal):', dbError);
-  console.log('Continuing without saving to database...');
-}
+        await logo.save();
+        console.log('Logo saved to database with ID:', logo._id);
+      } catch (dbError) {
+        // If database save fails, log the error but continue
+        console.error('Database save error (non-fatal):', dbError);
+        console.log('Continuing without saving to database...');
+      }
 
-// Return response whether database save worked or not
-return res.status(200).json({
-  imageUrl: logoData.imageUrl,
-  message: 'Logo generated successfully',
-  config: config
-});
+      // Return response with both S3 and local URLs for maximum compatibility
+      return res.status(200).json({
+        imageUrl: logoData.imageUrl,
+        localUrl: logoData.localUrl, // Include the local URL for fallback
+        message: 'Logo generated successfully',
+        config: config
+      });
 
     } catch (stabilityError) {
       console.error('Image Generation Error:', {
@@ -256,9 +304,7 @@ return res.status(200).json({
       error: error.message
     });
   }
-
 },
-
   // Test endpoint for Stability API
   generateLogoTest: async (req, res) => {
     try {
@@ -728,51 +774,31 @@ return res.status(200).json({
   
 
   // Get user's logos
+
   getUserLogos: async (req, res) => {
     try {
-      const userId = req.user?._id;
+      console.log('=== getUserLogos called ===');
       
-      // If user is not authenticated, return unauthorized
-      if (!userId) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-  
-      // Find logos specific to the user
-      const logos = await Logo.find({}).sort({ createdAt: -1 });
-      console.log(`Found ${logos.length} logos in database`);
-      
-      // Generate pre-signed URLs for each logo
-      const logosWithUrls = await Promise.all(logos.map(async (logo) => {
-        // If S3 key exists, generate a pre-signed URL with no expiration
-        if (logo.s3Key) {
-          try {
-            const preSignedUrl = await generatePreSignedUrl(
-              process.env.AWS_S3_BUCKET, 
-              logo.s3Key, 
-              0 // Permanent access
-            );
-            
-            return {
-              ...logo.toObject(), // Convert Mongoose document to plain object
-              url: preSignedUrl
-            };
-          } catch (urlError) {
-            console.error(`Failed to generate URL for logo ${logo._id}:`, urlError);
-            return {
-              ...logo.toObject(),
-              url: logo.imageUrl // Fallback to original URL
-            };
-          }
+      // Check if user is authenticated
+      if (!req.user) {
+        console.log('No authenticated user found in request');
+        // For the /user endpoint, this should return an authentication error
+        if (req.path === '/user') {
+          return res.status(401).json({ message: 'Authentication required' });
         }
-        
-        // If no S3 key, return original image URL
-        return {
-          ...logo.toObject(),
-          url: logo.imageUrl
-        };
-      }));
-  
-      res.status(200).json({ logos: logosWithUrls });
+        // For other endpoints, return empty array
+        return res.json({ logos: [] });
+      }
+      
+      const userId = req.user._id;
+      console.log('Fetching logos for authenticated user:', userId);
+      
+      // Find logos where userId matches the authenticated user
+      const logos = await Logo.find({ userId: userId }).sort({ createdAt: -1 });
+      console.log(`Found ${logos.length} logos for user ${userId}`);
+      
+      // Return the logos to the client
+      res.status(200).json({ logos: logos });
     } catch (error) {
       console.error('Get user logos error:', error);
       res.status(500).json({ 

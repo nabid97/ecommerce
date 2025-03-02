@@ -75,68 +75,72 @@ const ImageGenerator = () => {
   };
   
 
-  const handleGenerate = async () => {
-    if (!logoConfig.text.trim()) {
-      setError('Please enter logo text');
-      return;
-    }
+ // Updated handleGenerate function for src/pages/ImageGenerator.js
 
-    try {
-      setLoading(true);
-      setError('');
-      setCopied(false);
+const handleGenerate = async () => {
+  if (!logoConfig.text.trim()) {
+    setError('Please enter logo text');
+    return;
+  }
 
-      console.log('Generating logo with config:', logoConfig);
-      console.log('Prompt for Stability AI:', generatePrompt(logoConfig));
+  try {
+    setLoading(true);
+    setError('');
+    setCopied(false);
 
-      const response = await logoApi.generateLogo(logoConfig);
+    console.log('Generating logo with config:', logoConfig);
+    console.log('Prompt for Stability AI:', generatePrompt(logoConfig));
 
-      console.log('Logo generation response:', response);
+    const response = await logoApi.generateLogo(logoConfig);
 
-      if (response?.imageUrl) {
-        // Verify the URL is valid before setting it
-        if (response.imageUrl.startsWith('data:image')) {
-          // Direct base64 data URL - can be used as is
-          setGeneratedLogo(response.imageUrl);
-        }
-        else if (response.imageUrl.startsWith('/')) {
-          // Relative URL from server - prepend with base URL
-          const baseUrl = window.location.origin;
-          const fullUrl = `${baseUrl}${response.imageUrl}`;
-          console.log('Converting relative URL to full URL:', fullUrl);
-          setGeneratedLogo(fullUrl);
-        }
-        else {
-          // External URL - validate
-          try {
-            // Test if URL is valid
-            new URL(response.imageUrl);
-            setGeneratedLogo(response.imageUrl);
-          } catch (urlError) {
-            console.error('Invalid image URL received:', response.imageUrl);
-            
-            // Fall back to local placeholder if URL is invalid
-            setGeneratedLogo('/logo-placeholder.svg');
-            setError('Generated logo URL was invalid. Using placeholder instead.');
-          }
-        }
-      } else {
-        throw new Error('Failed to generate logo');
+    console.log('Logo generation response:', response);
+
+    if (response?.imageUrl) {
+      // First try: Check if direct S3 URL works
+      if (response.imageUrl.startsWith('http')) {
+        console.log('Using S3 URL:', response.imageUrl);
+        setGeneratedLogo(response.imageUrl);
+      } 
+      // Second try: Check if it's a base64 data URL
+      else if (response.imageUrl.startsWith('data:image')) {
+        console.log('Using base64 data URL');
+        setGeneratedLogo(response.imageUrl);
       }
-
-    } catch (err) {
-      console.error('Detailed logo generation error:', err);
-      
-      // Handle different types of errors
-      if (err.response) {
-        setError(err.response.data.message || 'Failed to generate logo');
-      } else {
-        setError(err.message || 'An unexpected error occurred');
+      // Third try: Check if it's a local URL path
+      else if (response.imageUrl.startsWith('/')) {
+        // Construct a full URL using the current origin
+        const baseUrl = window.location.origin;
+        const fullUrl = `${baseUrl}${response.imageUrl}`;
+        console.log('Using local URL:', fullUrl);
+        setGeneratedLogo(fullUrl);
       }
-    } finally {
-      setLoading(false);
+      // Fourth try: Fall back to localUrl if provided
+      else if (response.localUrl) {
+        const baseUrl = window.location.origin;
+        const fullUrl = `${baseUrl}${response.localUrl}`;
+        console.log('Falling back to local URL:', fullUrl);
+        setGeneratedLogo(fullUrl);
+      }
+      else {
+        console.error('Unable to determine correct image URL format:', response);
+        throw new Error('Invalid image URL format');
+      }
+    } else {
+      throw new Error('Failed to generate logo');
     }
-  };
+  } catch (err) {
+    console.error('Detailed logo generation error:', err);
+    
+    // Handle different types of errors
+    if (err.response) {
+      setError(err.response.data.message || 'Failed to generate logo');
+    } else {
+      setError(err.message || 'An unexpected error occurred');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCopyLogoUrl = () => {
     if (generatedLogo) {

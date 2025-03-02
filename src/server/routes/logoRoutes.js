@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const logoController = require('../controllers/logoController');
+const { auth } = require('../middleware/auth'); // Import authentication middleware
 
 // Debugging middleware
 router.use((req, res, next) => {
@@ -16,17 +17,19 @@ router.use((req, res, next) => {
   next();
 });
 
+// Public routes - no authentication required
 // Test routes for debugging
 router.get('/test', logoController.generateLogoTest);
 router.get('/test-direct', logoController.testStabilityDirect);
 
-// Generate logo route
+// Generate logo route (can work for both authenticated and anonymous users)
 router.post('/generate', logoController.generateLogo);
 
-
-// Add the missing route for clothing visualization
+// Visualization routes
 router.post('/visualize-clothing', logoController.generateClothingVisualization);
-// Add this after the generate route
+router.post('/simple-clothing-viz', logoController.simpleClothingVisualization);
+
+// S3 configuration check
 router.get('/check-s3', (req, res) => {
   const s3Config = {
     bucket: process.env.AWS_S3_BUCKET || 'ecommerce-website-generated-logo-2025',
@@ -40,13 +43,16 @@ router.get('/check-s3', (req, res) => {
     config: s3Config
   });
 });
-// Other routes
-router.post('/upload', logoController.uploadLogo);
-router.get('/', logoController.getUserLogos);
-router.get('/:id', logoController.getLogo);
-router.delete('/:id', logoController.deleteLogo);
-router.put('/:id', logoController.updateLogo);
-router.post('/simple-clothing-viz', logoController.simpleClothingVisualization);
 
+// User-specific routes - require authentication
+// IMPORTANT: This is the route you should call from the MyLogos component
+router.get('/user', auth, logoController.getUserLogos); // Add dedicated route for user's logos
+
+// General logo endpoints
+router.post('/upload', auth, logoController.uploadLogo); // Require auth for uploads
+router.get('/', logoController.getUserLogos); // Keep as fallback for all logos
+router.get('/:id', logoController.getLogo);
+router.delete('/:id', auth, logoController.deleteLogo); // Require auth for deletion
+router.put('/:id', auth, logoController.updateLogo); // Require auth for updates
 
 module.exports = router;

@@ -55,14 +55,36 @@ console.log('Serving fabric images from:', path.join(__dirname, 'src', 'assets',
 const clothingRoutes = require(path.join(__dirname, 'src/server/routes/clothingRoutes'));
 // Add static file serving for uploads directory with CORS headers
 app.use('/uploads', (req, res, next) => {
-  // Add CORS headers specifically for static files
+  // Enhanced CORS and security headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(path.join(__dirname, 'src', 'uploads')));
 console.log('Serving uploads from:', path.join(__dirname, 'src', 'uploads'));
+console.log('Uploads directory:', path.join(__dirname, 'src', 'uploads'));
+console.log('Full file path:', path.join(__dirname, 'src', 'uploads', 'logos', 'logo-1740943499044.png'));
+// Also add a route to serve uploaded images from the src/uploads directory as fallback
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'src', 'uploads')));
 
+console.log('Serving uploads (fallback) from:', path.join(__dirname, 'src', 'uploads'));
+
+app.get('/api/placeholder/:width/:height', (req, res) => {
+  const { width, height } = req.params;
+  const text = req.query.text || 'Placeholder';
+  
+  res.set('Content-Type', 'image/svg+xml');
+  res.send(`
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#e0e0e0"/>
+      <text x="50%" y="50%" font-family="Arial" font-size="20" text-anchor="middle" dominant-baseline="middle">${text}</text>
+    </svg>
+  `);
+});
 
 // Detailed request logging middleware
 app.use((req, res, next) => {

@@ -1,4 +1,5 @@
-//import api from '../utils/api';
+// Updated src/api/logoApi.js
+
 import axios from 'axios';
 
 // Define the API base URL - connect directly to the backend server
@@ -38,7 +39,13 @@ export const logoApi = {
       });
 
       console.log('Logo Generation API Response:', response.data);
-      return response.data;
+      
+      // Return both the imageUrl and localUrl for maximum compatibility
+      return {
+        imageUrl: response.data.imageUrl,
+        localUrl: response.data.localUrl,
+        ...response.data
+      };
     } catch (error) {
       console.error('Logo generation API error details:', {
         message: error.message,
@@ -50,6 +57,8 @@ export const logoApi = {
     }
   },
 
+  // Rest of the code remains the same...
+  
   uploadLogo: async (file, config = {}) => {
     try {
       const formData = new FormData();
@@ -73,11 +82,28 @@ export const logoApi = {
   },
 
   // Get user's stored logos
+ 
   getUserLogos: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/logos/user`);
+      // Get the token from localStorage
+      const token = localStorage.getItem('token');
+      console.log('Token for getUserLogos:', token ? 'Present' : 'Missing');
+      
+      // Create headers with authorization if token exists
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Make request with the authorization headers
+      const response = await axios.get(`${API_BASE_URL}/logos/user`, { headers });
+      console.log('User logos response:', response.data);
       return response.data;
     } catch (error) {
+      if (error.response?.status === 401) {
+        console.log('Authentication required for user logos');
+        return { logos: [] }; // Return empty array on auth failure
+      }
       console.error('Error fetching user logos:', error);
       throw error;
     }
@@ -108,4 +134,4 @@ export const logoApi = {
   },
 };
 
-export default logoApi;
+export default logoApi; 
