@@ -22,7 +22,14 @@ const generateFullUrl = (req, path) => {
   // For production, you might want to use a configured base URL
   return cleanPath;
 };
-
+const ensureDirectoryExists = (directoryPath) => {
+  if (!fs.existsSync(directoryPath)) {
+    console.log(`Creating directory: ${directoryPath}`);
+    fs.mkdirSync(directoryPath, { recursive: true });
+    return true;
+  }
+  return false;
+};
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -94,20 +101,21 @@ const logoController = {
       let logoData;
       
       // Handle base64 data URLs
-if (imageUrl.startsWith('data:image')) {
-  console.log('Image is base64, processing for upload...');
-  
-  try {
-    // Extract the base64 data and determine mimetype
-    const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    
-    if (!matches || matches.length !== 3) {
-      throw new Error('Invalid base64 format');
-    }
-    
-    const mimeType = matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
+      if (imageUrl.startsWith('data:image')) {
+        console.log('Image is base64, processing for upload...');
+        
+        try {
+          // Extract the base64 data and determine mimetype
+          const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          
+          if (!matches || matches.length !== 3) {
+            throw new Error('Invalid base64 format');
+            
+          }
+          
+          const mimeType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
     
     // Upload to S3 if configured
     // Upload to S3 if configured
@@ -172,7 +180,6 @@ if (process.env.AWS_S3_BUCKET && s3Service.uploadFile) {
       // Save locally if S3 is not configured
       const uploadsDir = path.join(__dirname, '../../../uploads/logos');
       if (!fs.existsSync(uploadsDir)) {
-        console.log('Creating directory:', uploadsDir);
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
       
@@ -249,6 +256,7 @@ return res.status(200).json({
       error: error.message
     });
   }
+
 },
 
   // Test endpoint for Stability API
@@ -730,7 +738,8 @@ return res.status(200).json({
       }
   
       // Find logos specific to the user
-      const logos = await Logo.find({ userId }).sort({ createdAt: -1 });
+      const logos = await Logo.find({}).sort({ createdAt: -1 });
+      console.log(`Found ${logos.length} logos in database`);
       
       // Generate pre-signed URLs for each logo
       const logosWithUrls = await Promise.all(logos.map(async (logo) => {

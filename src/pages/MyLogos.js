@@ -124,13 +124,15 @@ const MyLogos = () => {
                 <CardTitle className="text-lg truncate">{logo.config?.text || "Logo"}</CardTitle>
               </CardHeader>
               <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
-                <img
+              <img
                   src={logo.imageUrl}
-                  alt={logo.config?.text || "Generated Logo"}
-                  className="max-h-full max-w-full object-contain"
+                  alt={logo.config?.text || 'Generated Logo'}
+                  className="max-h-48 mx-auto object-contain"
+                  onLoad={() => console.log("Logo image loaded successfully:", logo.imageUrl)}
                   onError={(e) => {
                     console.error('Failed to load logo image:', logo.imageUrl);
-                    e.target.src = '/api/placeholder/300/200?text=Image+Not+Found';
+                    e.target.onerror = null; // Prevent infinite error loop
+                    e.target.src = '/api/placeholder/200/200?text=Logo+Error';
                   }}
                 />
               </div>

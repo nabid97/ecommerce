@@ -7,6 +7,7 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_REGION || 'us-east-1'
 });
+
 // Log AWS configuration status for debugging
 console.log('\n===== AWS S3 CONFIGURATION =====');
 console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? '✓ Set' : '✗ Not set');
@@ -44,20 +45,26 @@ const s3Service = {
   uploadFile: async (file, folder = 'general') => {
     const fileName = `${folder}/${uuidv4()}-${file.originalname || 'file'}`;
 
+    // Base params without ACL (removed ACL: 'public-read')
     const params = {
       Bucket: S3_BUCKET,
       Key: fileName,
       Body: file.buffer,
-      ContentType: file.mimetype || 'application/octet-stream',
-      ACL: 'public-read'
+      ContentType: file.mimetype || 'application/octet-stream'
+      // ACL parameter removed since the bucket doesn't support ACLs
     };
 
     try {
       console.log(`Uploading to S3 bucket: ${S3_BUCKET}, key: ${fileName}`);
       const result = await s3.upload(params).promise();
       console.log('S3 upload successful:', result.Location);
+      
+      // Generate a publicly accessible URL based on the bucket and key
+      // since we can't use ACLs for public access
+      const publicUrl = `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`;
+      
       return {
-        url: result.Location,
+        url: publicUrl, // Use constructed URL instead of result.Location
         key: result.Key
       };
     } catch (error) {
