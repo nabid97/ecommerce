@@ -57,11 +57,10 @@ const Cart = () => {
           {cart.map((item) => (
             <Card 
               key={`${item.id}-${JSON.stringify(item.customizations)}`} 
-              className="mb-4"
               data-testid={`cart-item-${item.id}`}
               variant="flat"
               size="sm"
-              className={cardInteractions.hoverable}
+              className={`mb-4 ${cardInteractions.hoverable}`}
             >
               <CardContent>
                 <div className="flex items-center">
