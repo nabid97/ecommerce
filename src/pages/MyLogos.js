@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardActions } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { logoApi } from '../api/logoApi';
 import { useAuth } from '../contexts/AuthContext';
+import { cardInteractions } from '../components/ui/card/Card.styles';
 
 const MyLogos = () => {
   const [logos, setLogos] = useState([]);
@@ -16,35 +17,34 @@ const MyLogos = () => {
     fetchLogos();
   }, []);
 
-  // In src/pages/MyLogos.js
-const fetchLogos = async () => {
-  try {
-    // Only attempt to fetch if user is logged in
-    if (!user) {
-      setLogos([]);
-      setLoading(false);
-      return;
-    }
+  const fetchLogos = async () => {
+    try {
+      // Only attempt to fetch if user is logged in
+      if (!user) {
+        setLogos([]);
+        setLoading(false);
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
-    
-    // Make sure you're calling the right API method
-    const response = await logoApi.getUserLogos();  // Not getLogos()
-    console.log('Fetched logos:', response);
-    
-    if (response.logos) {
-      setLogos(response.logos);
-    } else {
-      setLogos([]);
+      setLoading(true);
+      setError(null);
+      
+      // Make sure you're calling the right API method
+      const response = await logoApi.getUserLogos();  // Not getLogos()
+      console.log('Fetched logos:', response);
+      
+      if (response.logos) {
+        setLogos(response.logos);
+      } else {
+        setLogos([]);
+      }
+    } catch (err) {
+      console.error('Error fetching logos:', err);
+      setError('Failed to load your logos. Please try again later.');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Error fetching logos:', err);
-    setError('Failed to load your logos. Please try again later.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleDelete = async (logoId) => {
     try {
@@ -97,7 +97,10 @@ const fetchLogos = async () => {
       )}
 
       {logos.length === 0 ? (
-        <Card>
+        <Card variant="bordered">
+          <CardHeader variant="transparent">
+            <CardTitle>Logo Gallery</CardTitle>
+          </CardHeader>
           <CardContent className="flex flex-col items-center justify-center p-12">
             <svg
               className="w-16 h-16 text-gray-400 mb-4"
@@ -117,23 +120,29 @@ const fetchLogos = async () => {
             <p className="text-gray-600 mb-6">
               You haven't generated any logos yet. Create your first logo now!
             </p>
-            <Link
-              to="/image-generator"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Generate Logo
-            </Link>
+            <CardActions align="center">
+              <Link
+                to="/image-generator"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Generate Logo
+              </Link>
+            </CardActions>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {logos.map((logo) => (
-            <Card key={logo._id} className="overflow-hidden">
-              <CardHeader className="p-4">
+            <Card 
+              key={logo._id} 
+              variant="bordered" 
+              className={`overflow-hidden ${cardInteractions.hoverable}`}
+            >
+              <CardHeader variant="colored" className="p-4">
                 <CardTitle className="text-lg truncate">{logo.config?.text || "Logo"}</CardTitle>
               </CardHeader>
               <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
-              <img
+                <img
                   src={logo.imageUrl}
                   alt={logo.config?.text || 'Generated Logo'}
                   className="max-h-48 mx-auto object-contain"
@@ -157,8 +166,8 @@ const fetchLogos = async () => {
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between p-4 border-t">
-                <a
+              <CardFooter variant="flex" className="p-4">
+                
                   href={logo.imageUrl}
                   download="logo.png"
                   className="text-blue-600 hover:text-blue-800"

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import { Card, CardContent } from './ui/card/Card';
-import { Alert, AlertDescription } from './ui/alert/Alert';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardActions } from '../components/ui/card/Card';
+import { Alert, AlertDescription } from '../components/ui/alert/Alert';
+import { cardInteractions } from '../components/ui/card/Card.styles';
 
 const ShoppingCartView = () => {
   const navigate = useNavigate();
@@ -64,22 +65,32 @@ const ShoppingCartView = () => {
         {/* Cart Items */}
         <div className="lg:col-span-2">
           {cart.length === 0 ? (
-            <Card>
+            <Card variant="bordered">
+              <CardHeader variant="transparent">
+                <CardTitle>Shopping Cart</CardTitle>
+              </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
                   <h2 className="text-xl font-semibold mb-4">Your cart is empty</h2>
-                  <button
-                    onClick={() => navigate('/products')}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    Continue Shopping
-                  </button>
+                  <CardActions align="center">
+                    <button
+                      onClick={() => navigate('/products')}
+                      className="text-blue-600 hover:text-blue-700 px-4 py-2 rounded border border-blue-600"
+                    >
+                      Continue Shopping
+                    </button>
+                  </CardActions>
                 </div>
               </CardContent>
             </Card>
           ) : (
             cart.map((item) => (
-              <Card key={`${item.id}-${JSON.stringify(item.customizations)}`} className="mb-4">
+              <Card 
+                key={`${item.id}-${JSON.stringify(item.customizations)}`} 
+                className={`mb-4 ${cardInteractions.hoverable}`}
+                variant="flat"
+                size="sm"
+              >
                 <CardContent>
                   <div className="flex items-center">
                     <div className="w-24 h-24">
@@ -138,9 +149,11 @@ const ShoppingCartView = () => {
 
         {/* Order Summary */}
         <div>
-          <Card>
+          <Card variant="bordered" size="md">
+            <CardHeader variant="primary">
+              <CardTitle className="text-white">Order Summary</CardTitle>
+            </CardHeader>
             <CardContent>
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -165,13 +178,15 @@ const ShoppingCartView = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleCheckout}
-                  disabled={cart.length === 0}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Proceed to Checkout
-                </button>
+                <CardActions align="center">
+                  <button
+                    onClick={handleCheckout}
+                    disabled={cart.length === 0}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Proceed to Checkout
+                  </button>
+                </CardActions>
 
                 <button
                   onClick={() => navigate('/products')}

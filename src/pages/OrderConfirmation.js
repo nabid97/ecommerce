@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardActions } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 
 const OrderConfirmation = () => {
@@ -138,9 +138,9 @@ const OrderConfirmation = () => {
         </div>
 
         {/* Order Details */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Order Details</CardTitle>
+        <Card variant="bordered" className="mb-6">
+          <CardHeader variant="gradient">
+            <CardTitle className="text-white">Order Details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -213,8 +213,8 @@ const OrderConfirmation = () => {
         </Card>
 
         {/* Shipping Details */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card variant="bordered" className="mb-6">
+          <CardHeader variant="colored">
             <CardTitle>Shipping Information</CardTitle>
           </CardHeader>
           <CardContent>
@@ -241,9 +241,9 @@ const OrderConfirmation = () => {
         </Card>
 
         {/* Order Status */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Order Status</CardTitle>
+        <Card variant="bordered" className="mb-8">
+          <CardHeader variant="primary">
+            <CardTitle className="text-white">Order Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -283,7 +283,7 @@ const OrderConfirmation = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-between">
+        <CardActions align="between">
           <Link
             to="/"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -296,7 +296,7 @@ const OrderConfirmation = () => {
           >
             Print Order Details
           </button>
-        </div>
+        </CardActions>
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '../components/ui/card/Card';
+import { Card, CardContent, CardImage, CardTitle, CardDescription } from '../components/ui/card/Card';
+import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { fabricService } from '../services/fabricService';
+import { cardInteractions } from '../components/ui/card/Card.styles';
 
 const ProductGallery = () => {
   const navigate = useNavigate();
@@ -135,23 +137,21 @@ const ProductGallery = () => {
         {products.map((product) => (
           <Card 
             key={product._id || product.id}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            className={`${cardInteractions.hoverable} cursor-pointer`}
             onClick={() => handleProductClick(product._id || product.id)}
+            variant="bordered"
+            size="sm"
           >
+            <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
+              <img
+                src={product.images?.[0]?.url || '/placeholder.png'}
+                alt={product.name}
+                className="h-full w-full object-cover object-center"
+              />
+            </div>
             <CardContent>
-              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 mb-4">
-                <img
-                  src={
-                    product.images && product.images.length > 0 
-                      ? product.images[0].url 
-                      : '/placeholder.png'
-                  }
-                  alt={product.name}
-                  className="h-full w-full object-cover object-center"
-                />
-              </div>
-              <h3 className="text-lg font-semibold">{product.name}</h3>
-              <p className="text-gray-600 text-sm mt-1">{product.description}</p>
+              <CardTitle>{product.name}</CardTitle>
+              <CardDescription>{product.description}</CardDescription>
               <div className="mt-2 flex justify-between items-center">
                 <span className="text-lg font-bold">${product.price}</span>
                 <span className="text-sm text-gray-500">

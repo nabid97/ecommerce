@@ -36,3 +36,4 @@ secrets.json
 src/secrets.json
 src/uploads 
 /aws
+.zip

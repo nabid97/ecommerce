@@ -12,7 +12,8 @@ import Fabric from './pages/Fabric';
 import ImageGenerator from './pages/ImageGenerator';
 import Checkout from './pages/Checkout';
 import Cart from './pages/Cart';
-import OrderConfirmation from './pages/OrderConfirmation'; // Import the OrderConfirmation component
+import OrderConfirmation from './pages/OrderConfirmation'; 
+import CardDemo from './pages/CardDemo';// Import the OrderConfirmation component
 
 const App = () => {
   return (
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/order-confirmation" element={<OrderConfirmation />} /> {/* Add this route */}
+            <Route path="/card-demo" element={<CardDemo />} />
           </Routes>
         </Router>
       </CartProvider>

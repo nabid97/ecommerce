@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Card, CardContent } from '../components/ui/card/Card';
+import { Card, CardHeader, CardTitle, CardContent, CardActions } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 
 const Login = () => {
@@ -53,7 +53,10 @@ const Login = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card>
+        <Card variant="bordered" size="md">
+          <CardHeader variant="primary">
+            <CardTitle className="text-white">Sign In</CardTitle>
+          </CardHeader>
           <CardContent>
             {error && (
               <Alert className="mb-4">
@@ -116,7 +119,7 @@ const Login = () => {
                 </div>
               </div>
 
-              <div>
+              <CardActions align="center">
                 <button
                   type="submit"
                   disabled={loading}
@@ -124,7 +127,7 @@ const Login = () => {
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
                 </button>
-              </div>
+              </CardActions>
             </form>
           </CardContent>
         </Card>

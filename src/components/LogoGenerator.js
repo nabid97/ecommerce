@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card/Card';
-import { Alert, AlertDescription } from './ui/alert/Alert';
+import { Card, CardHeader, CardTitle, CardContent, CardActions, CardDivider } from '../components/ui/card/Card';
+import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { logoApi } from '../api/logoApi';
 
 const LogoGenerator = ({ onLogoGenerate }) => {
@@ -30,7 +30,6 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     { value: 'Garamond', label: 'Garamond (Classic)' },
     { value: 'Montserrat', label: 'Montserrat (Contemporary)' },
     { value: 'Random', label: 'Random' },
-    
   ];
 
   // Style options
@@ -44,9 +43,6 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     { value: 'abstract', label: 'Abstract' },
     { value: 'random', label: 'Random' },
     { value: 'Football', label: 'Football' },
-    
-
-    
   ];
 
   // Size options
@@ -68,8 +64,6 @@ const LogoGenerator = ({ onLogoGenerate }) => {
   ${config.additionalInstructions ? `- Additional Instructions: ${config.additionalInstructions}` : ''}
   Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.`;
   };
-  
-  
   
   const handleGenerate = async () => {
     if (!logoConfig.text.trim()) {
@@ -119,13 +113,13 @@ const LogoGenerator = ({ onLogoGenerate }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <Card className="shadow-lg border-0">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-          <CardTitle className="text-2xl">Logo Generator</CardTitle>
+      <Card variant="elevated" size="md" className="shadow-lg border-0">
+        <CardHeader variant="gradient">
+          <CardTitle className="text-white text-2xl">Logo Generator</CardTitle>
           <p className="text-blue-100 mt-1">Create a professional logo for your brand</p>
         </CardHeader>
         
-        <CardContent className="p-6">
+        <CardContent>
           {error && (
             <Alert variant="error" className="mb-6">
               <AlertDescription>{error}</AlertDescription>
@@ -266,23 +260,25 @@ const LogoGenerator = ({ onLogoGenerate }) => {
                 />
               </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={loading || !logoConfig.text.trim()}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium shadow-sm"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Generating Logo...
-                  </div>
-                ) : (
-                  'Generate Logo'
-                )}
-              </button>
+              <CardActions align="center">
+                <button
+                  onClick={handleGenerate}
+                  disabled={loading || !logoConfig.text.trim()}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium shadow-sm"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Generating Logo...
+                    </div>
+                  ) : (
+                    'Generate Logo'
+                  )}
+                </button>
+              </CardActions>
             </div>
 
             {/* Logo Preview Section */}
@@ -329,50 +325,52 @@ const LogoGenerator = ({ onLogoGenerate }) => {
 
               {/* Download/Copy Action Buttons */}
               {generatedLogo && (
-                <div className="mt-4 flex space-x-2">
-                  <a 
-                    href={generatedLogo}
-                    download="my-logo.png"
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all text-center font-medium flex items-center justify-center"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <svg 
-                      className="w-5 h-5 mr-2" 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
+                <div className="mt-4">
+                  <CardActions align="between">
+                    <a 
+                      href={generatedLogo}
+                      download="my-logo.png"
+                      className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all text-center font-medium flex items-center justify-center"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
-                      />
-                    </svg>
-                    Download
-                  </a>
-                  <button
-                    onClick={handleCopyLogoUrl}
-                    className="flex-1 bg-gray-100 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-200 transition-all font-medium flex items-center justify-center"
-                  >
-                    <svg 
-                      className="w-5 h-5 mr-2" 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
+                      <svg 
+                        className="w-5 h-5 mr-2" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                        />
+                      </svg>
+                      Download
+                    </a>
+                    <button
+                      onClick={handleCopyLogoUrl}
+                      className="flex-1 bg-gray-100 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-200 transition-all font-medium flex items-center justify-center ml-2"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" 
-                      />
-                    </svg>
-                    {copied ? 'Copied!' : 'Copy URL'}
-                  </button>
+                      <svg 
+                        className="w-5 h-5 mr-2" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                        />
+                      </svg>
+                      {copied ? 'Copied!' : 'Copy URL'}
+                    </button>
+                  </CardActions>
                 </div>
               )}
 
