@@ -66,7 +66,7 @@ const Fabric = () => {
             minOrder: 20,
             price: 15.99,
             colors: ['white', 'cream', 'black', 'red'],
-            styles: ['plain', 'charmeuse', 'satin', 'chiffon']
+            styles: ['plain', 'charmeuse', 'satin']
         },
         {
             id: 'wool',
@@ -462,18 +462,6 @@ const Fabric = () => {
                                                     ? `Minimum order requirement: ${selectedFabric.minOrder} meters`
                                                     : `Minimum order: ${selectedFabric.minOrder} meters`}
                                             </p>
-                                        </div>
-
-                                        {/* Logo Upload */}
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Add Logo (Optional)</label>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleLogoUpload}
-                                                className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                                data-testid="logo-upload"
-                                            />
                                         </div>
                                     </div>
                                 </CardContent>

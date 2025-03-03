@@ -15,8 +15,8 @@ export const cardVariants = {
 };
 
 /**
- * Card sizing options
- */
+* Card sizing options
+*/
 export const cardSizes = {
   xs: 'p-2',
   sm: 'p-4',
@@ -26,8 +26,8 @@ export const cardSizes = {
 };
 
 /**
- * Header style variants
- */
+* Header style variants
+*/
 export const headerStyles = {
   default: 'px-6 py-4 border-b border-gray-200',
   transparent: 'px-6 py-4',
@@ -41,8 +41,8 @@ export const headerStyles = {
 };
 
 /**
- * Footer style variants
- */
+* Footer style variants
+*/
 export const footerStyles = {
   default: 'px-6 py-4 border-t border-gray-200',
   transparent: 'px-6 py-4',
@@ -52,8 +52,8 @@ export const footerStyles = {
 };
 
 /**
- * Card content area styles
- */
+* Card content area styles
+*/
 export const contentStyles = {
   default: 'px-6 py-4',
   compact: 'px-4 py-3',
@@ -62,10 +62,10 @@ export const contentStyles = {
 };
 
 /**
- * Card interaction states
- */
+* Card interaction states
+*/
 export const cardInteractions = {
-  hoverable: 'transition-shadow duration-200 hover:shadow-lg',
+  hoverable: 'transition-all duration-200 hover:shadow-lg hover:-translate-y-1',
   clickable: 'cursor-pointer transition-all duration-200 hover:shadow-md active:shadow-inner active:translate-y-px',
-  selectable: 'cursor-pointer transition-all hover:bg-gray-50',
+  selectable: 'cursor-pointer transition-all duration-300 hover:bg-gray-100 hover:scale-105 hover:shadow-md focus:ring-2 focus:ring-blue-500',
 };
