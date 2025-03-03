@@ -7,7 +7,7 @@ const LogoGenerator = ({ onLogoGenerate }) => {
   const [logoConfig, setLogoConfig] = useState({
     text: '',
     color: '#3B82F6',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'White',
     size: 'medium',
     style: 'modern',
     font: 'Arial',
@@ -32,18 +32,6 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     { value: 'Random', label: 'Random' }
   ];
 
-  const styleOptions = [
-    { value: 'modern', label: 'Modern' },
-    { value: 'classic', label: 'Classic' },
-    { value: 'minimalist', label: 'Minimalist' },
-    { value: 'bold', label: 'Bold' },
-    { value: 'elegant', label: 'Elegant' },
-    { value: 'geometric', label: 'Geometric' },
-    { value: 'abstract', label: 'Abstract' },
-    { value: 'random', label: 'Random' },
-    { value: 'Football', label: 'Football' }
-  ];
-
   const sizeOptions = [
     { value: 'small', label: 'Small' },
     { value: 'medium', label: 'Medium' },
@@ -52,37 +40,29 @@ const LogoGenerator = ({ onLogoGenerate }) => {
   ];
 
   const colorOptions = [
-    { label: 'Red', value: '#FF0000' },
-    { label: 'Green', value: '#00FF00' },
-    { label: 'Blue', value: '#0000FF' },
-    { label: 'Yellow', value: '#FFFF00' },
-    { label: 'Purple', value: '#800080' },
-    { label: 'Orange', value: '#FFA500' },
-    { label: 'Pink', value: '#FFC0CB' },
-    { label: 'Brown', value: '#8B4513' },
-    { label: 'Gray', value: '#808080' },
-    { label: 'Black', value: '#000000' },
-    { label: 'White', value: '#FFFFFF' }
+    { label: 'Red', value: 'Red' },
+    { label: 'Green', value: 'Green' },
+    { label: 'Blue', value: 'Blue' },
+    { label: 'Yellow', value: 'Yellow' },
+    { label: 'Purple', value: 'Purple' },
+    { label: 'Orange', value: 'Orange' },
+    { label: 'Pink', value: 'Pink' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'Gray', value: 'Gray' },
+    { label: 'Black', value: 'Black' },
+    { label: 'White', value: 'White' }
   ];
 
-  const textEffectOptions = [
-    { value: 'normal', label: 'Normal' },
-    { value: 'bold', label: 'Bold' },
-    { value: 'italic', label: 'Italic' },
-    { value: 'underline', label: 'Underline' }
-  ];
 
-  const generatePrompt = (config) => {
-    return `Design a professional ${config.style} logo that strictly follows these specifications. The final image should ONLY contain the logo design and no additional text, labels, or annotations:
-  - Logo Text: "${config.text}"
-  - Font: ${config.font}
-  - Text Effect: ${config.textEffect}
-  - Primary Color: ${config.color}
-  - Background Color: ${config.backgroundColor}
-  - Dimensions: ${config.size}
-  ${config.additionalInstructions ? `- Additional Instructions: ${config.additionalInstructions}` : ''}
-  Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.`;
-  };
+    const textEffectOptions = [
+      { value: 'normal', label: 'Normal' },
+      { value: 'bold', label: 'Bold' },
+      { value: 'italic', label: 'Italic' },
+      { value: 'underline', label: 'Underline' },
+      { value: 'modern', label: 'Modern' },
+      { value: 'random', label: 'Random' },
+      { value: 'football', label: 'Football' }
+  ];
 
   const handleGenerate = async () => {
     if (!logoConfig.text.trim()) {

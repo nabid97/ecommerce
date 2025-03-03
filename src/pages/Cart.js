@@ -1,8 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import { Card, CardHeader, CardTitle, CardContent, CardActions, CardFooter } from '../components/ui/card/Card';
-import { cardInteractions } from '../components/ui/card/Card.styles';
+import { Card, CardContent } from '../components/ui/card/Card';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -25,25 +24,14 @@ const Cart = () => {
   if (cart.length === 0) {
     return (
       <div className="p-4 text-center" data-testid="empty-cart">
-        <Card variant="bordered" size="md">
-          <CardHeader variant="colored">
-            <CardTitle>Shopping Cart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="py-8">
-              <h2 className="text-xl font-semibold mb-4">Your cart is empty</h2>
-              <CardActions align="center">
-                <button
-                  onClick={() => navigate('/fabric')}
-                  className="text-blue-600 hover:text-blue-700 px-4 py-2 border border-blue-600 rounded"
-                  data-testid="continue-shopping-button"
-                >
-                  Continue Shopping
-                </button>
-              </CardActions>
-            </div>
-          </CardContent>
-        </Card>
+        <h2 className="text-xl font-semibold mb-4">Your cart is empty</h2>
+        <button
+          onClick={() => navigate('/fabric')}
+          className="text-blue-600 hover:text-blue-700"
+          data-testid="continue-shopping-button"
+        >
+          Continue Shopping
+        </button>
       </div>
     );
   }
@@ -57,10 +45,8 @@ const Cart = () => {
           {cart.map((item) => (
             <Card 
               key={`${item.id}-${JSON.stringify(item.customizations)}`} 
+              className="mb-4"
               data-testid={`cart-item-${item.id}`}
-              variant="flat"
-              size="sm"
-              className={`mb-4 ${cardInteractions.hoverable}`}
             >
               <CardContent>
                 <div className="flex items-center">
@@ -122,11 +108,9 @@ const Cart = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <Card variant="bordered" size="md">
-            <CardHeader variant="primary">
-              <CardTitle className="text-white">Order Summary</CardTitle>
-            </CardHeader>
+          <Card>
             <CardContent>
+              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -142,15 +126,13 @@ const Cart = () => {
                     <span data-testid="cart-total">${total.toFixed(2)}</span>
                   </div>
                 </div>
-                <CardActions align="center">
-                  <button
-                    onClick={handleCheckout}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-                    data-testid="checkout-button"
-                  >
-                    Proceed to Checkout
-                  </button>
-                </CardActions>
+                <button
+                  onClick={handleCheckout}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+                  data-testid="checkout-button"
+                >
+                  Proceed to Checkout
+                </button>
                 <button
                   onClick={() => navigate('/fabric')}
                   className="w-full text-blue-600 hover:text-blue-700"

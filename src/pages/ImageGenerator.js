@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDivider, CardActions } fr
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { logoApi } from '../api/logoApi';
 import { useAuth } from '../contexts/AuthContext';
+import { cardInteractions } from '../components/ui/card/Card.styles';
 
 const ImageGenerator = () => {
   const navigate = useNavigate();
@@ -14,9 +15,15 @@ const ImageGenerator = () => {
     backgroundColor: '#FFFFFF',
     size: 'medium',
     style: 'modern',
-    font: 'Arial',
+    font: 'Random',
     textEffect: 'normal',
-    additionalInstructions: ''
+    additionalInstructions: '',
+    primaryColorMode: 'preset',
+    customPrimaryColor: '',
+    customPrimaryHex: '#3B82F6',
+    backgroundColorMode: 'preset',
+    customBackgroundColor: '',
+    customBackgroundHex: '#FFFFFF'
   });
 
   const [generatedLogo, setGeneratedLogo] = useState(null);
@@ -37,19 +44,6 @@ const ImageGenerator = () => {
     { value: 'Random', label: 'Random' }
   ];
 
-  const styleOptions = [
-    { value: 'modern', label: 'Modern' },
-    { value: 'classic', label: 'Classic' },
-    { value: 'minimalist', label: 'Minimalist' },
-    { value: 'bold', label: 'Bold' },
-    { value: 'elegant', label: 'Elegant' },
-    { value: 'geometric', label: 'Geometric' },
-    { value: 'abstract', label: 'Abstract' },
-    { value: 'vintage', label: 'Vintage' },
-    { value: 'random', label: 'Random' },
-    { value: 'Football', label: 'Football' }
-  ];
-
   const sizeOptions = [
     { value: 'small', label: 'Small' },
     { value: 'medium', label: 'Medium' },
@@ -57,49 +51,63 @@ const ImageGenerator = () => {
     { value: 'random', label: 'Random' }
   ];
 
-  const colorOptions = [
-    { label: 'Red', value: '#FF0000' },
-    { label: 'Green', value: '#00FF00' },
-    { label: 'Blue', value: '#0000FF' },
-    { label: 'Yellow', value: '#FFFF00' },
-    { label: 'Purple', value: '#800080' },
-    { label: 'Orange', value: '#FFA500' },
-    { label: 'Pink', value: '#FFC0CB' },
-    { label: 'Brown', value: '#8B4513' },
-    { label: 'Gray', value: '#808080' },
-    { label: 'Black', value: '#000000' },
-    { label: 'White', value: '#FFFFFF' }
+  const presetColors = [
+     { label: 'Red', value: 'Red' },
+    { label: 'Green', value: 'Green' },
+    { label: 'Blue', value: 'Blue' },
+    { label: 'Yellow', value: 'Yellow' },
+    { label: 'Purple', value: 'Purple' },
+    { label: 'Orange', value: 'Orange' },
+    { label: 'Pink', value: 'Pink' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'Gray', value: 'Gray' },
+    { label: 'Black', value: 'Black' },
+    { label: 'White', value: 'White' }
+  ];
+
+  const customColors = [
+    { name: 'Sky Blue', hex: '#87CEEB' },
+    { name: 'Coral', hex: '#FF7F50' },
+    { name: 'Mint Green', hex: '#98FB98' },
+    { name: 'Lavender', hex: '#E6E6FA' },
+    { name: 'Slate Gray', hex: '#708090' },
+    { name: 'Peach', hex: '#FFDAB9' },
+    { name: 'Turquoise', hex: '#40E0D0' },
+    { name: 'Crimson', hex: '#DC143C' },
+    { name: 'Indigo', hex: '#4B0082' },
+    { name: 'Forest Green', hex: '#228B22' },
+    { name: 'Ruby Red', hex: '#E0115F' },
+    { name: 'Royal Blue', hex: '#4169E1' }
   ];
 
   const textEffectOptions = [
     { value: 'normal', label: 'Normal' },
     { value: 'bold', label: 'Bold' },
     { value: 'italic', label: 'Italic' },
-    { value: 'underline', label: 'Underline' }
+    { value: 'underline', label: 'Underline' },
+    { value: 'modern', label: 'Modern' },
+    { value: 'football', label: 'Football' },
+    { value: 'random', label: 'Random' },
   ];
-
-  const generatePrompt = (config) => {
-    return `Design a professional ${config.style} logo that strictly follows these specifications. The final image should ONLY contain the logo design and no additional text, labels, or annotations:
-  - Logo Text: "${config.text}"
-  - Font: ${config.font}
-  - Text Effect: ${config.textEffect}
-  - Primary Color: ${config.color}
-  - Background Color: ${config.backgroundColor}
-  - Dimensions: ${config.size}
-  ${config.additionalInstructions ? `- Additional Instructions: ${config.additionalInstructions}` : ''}
-  Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.`;
-  };
 
   const handleGenerate = async () => {
     if (!logoConfig.text.trim()) {
       setError('Please enter logo text');
       return;
     }
+    
     try {
       setLoading(true);
       setError('');
       setCopied(false);
-      const response = await logoApi.generateLogo(logoConfig);
+      
+      const finalConfig = {
+        ...logoConfig,
+        color: logoConfig.primaryColorMode === 'custom' ? logoConfig.customPrimaryHex : logoConfig.color,
+        backgroundColor: logoConfig.backgroundColorMode === 'custom' ? logoConfig.customBackgroundHex : logoConfig.backgroundColor
+      };
+      
+      const response = await logoApi.generateLogo(finalConfig);
       if (response?.imageUrl) {
         setGeneratedLogo(response.imageUrl);
       } else {
@@ -138,7 +146,6 @@ const ImageGenerator = () => {
         </p>
       </div>
 
-      {/* Tab Navigation */}
       <div className="mb-6 flex border-b">
         <button
           className={`py-3 px-6 font-medium text-sm transition-all ${
@@ -201,38 +208,221 @@ const ImageGenerator = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Primary Color
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Primary Color
+                  </label>
+                  <div className="flex mb-4 space-x-2">
+                    <button
+                      onClick={() => handleInputChange('primaryColorMode', 'preset')}
+                      className={`flex-1 py-2 px-4 text-sm rounded-lg transition-colors duration-200 ${
+                        logoConfig.primaryColorMode === 'preset' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      Preset Colors
+                    </button>
+                    <button
+                      onClick={() => handleInputChange('primaryColorMode', 'custom')}
+                      className={`flex-1 py-2 px-4 text-sm rounded-lg transition-colors duration-200 ${
+                        logoConfig.primaryColorMode === 'custom' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      Custom Color
+                    </button>
+                  </div>
+
+                  {logoConfig.primaryColorMode === 'preset' ? (
                     <select
                       value={logoConfig.color}
                       onChange={(e) => handleInputChange('color', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out appearance-none bg-white text-gray-700 cursor-pointer hover:border-blue-400"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='5' viewBox='0 0 10 5'><path fill='none' stroke='%233B82F6' stroke-width='2' d='M0 0l5 5 5-5'/></svg>")`,
+                        backgroundPosition: 'right 0.75rem center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '10px 5px',
+                      }}
                     >
-                      {colorOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                      {presetColors.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="color"
+                          value={logoConfig.customPrimaryHex || '#3B82F6'}
+                          onChange={(e) => handleInputChange('customPrimaryHex', e.target.value)}
+                          className="w-16 h-16 rounded-full border-0 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Custom color name (e.g., Sky Blue)"
+                          value={logoConfig.customPrimaryColor || ''}
+                          onChange={(e) => setLogoConfig({
+                            ...logoConfig,
+                            customPrimaryColor: e.target.value
+                          })}
+                          className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {customColors.map(color => (
+                          <div
+                            key={color.name}
+                            onClick={() => setLogoConfig({
+                              ...logoConfig,
+                              customPrimaryHex: color.hex,
+                              customPrimaryColor: color.name
+                            })}
+                            className={`${cardInteractions.selectable} h-8 w-full rounded-full relative flex items-center justify-center ${
+                              logoConfig.customPrimaryHex === color.hex ? 'ring-2 ring-blue-500' : ''
+                            }`}
+                            style={{ backgroundColor: color.hex }}
+                            title={color.name}
+                          >
+                            {logoConfig.customPrimaryHex === color.hex && (
+                              <svg className="w-4 h-4 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            <span className="absolute text-xs text-white font-medium opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black bg-opacity-50 rounded px-1 py-0.5">
+                              {color.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Selected:</span>
+                    <div
+                      className="h-6 w-6 rounded-full border transition-all duration-200"
+                      style={{ 
+                        backgroundColor: logoConfig.primaryColorMode === 'custom' 
+                          ? logoConfig.customPrimaryHex 
+                          : logoConfig.color 
+                      }}
+                    />
+                    <span className="text-sm">
+                      {logoConfig.primaryColorMode === 'custom' 
+                        ? (logoConfig.customPrimaryColor || 'Custom') 
+                        : presetColors.find(c => c.value === logoConfig.color)?.label || logoConfig.color}
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Background Color
-                    </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Background Color
+                  </label>
+                  <div className="flex mb-4 space-x-2">
+                    <button
+                      onClick={() => handleInputChange('backgroundColorMode', 'preset')}
+                      className={`flex-1 py-2 px-4 text-sm rounded-lg transition-colors duration-200 ${
+                        logoConfig.backgroundColorMode === 'preset' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      Preset Colors
+                    </button>
+                    <button
+                      onClick={() => handleInputChange('backgroundColorMode', 'custom')}
+                      className={`flex-1 py-2 px-4 text-sm rounded-lg transition-colors duration-200 ${
+                        logoConfig.backgroundColorMode === 'custom' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      Custom Color
+                    </button>
+                  </div>
+
+                  {logoConfig.backgroundColorMode === 'preset' ? (
                     <select
                       value={logoConfig.backgroundColor}
                       onChange={(e) => handleInputChange('backgroundColor', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out appearance-none bg-white text-gray-700 cursor-pointer hover:border-blue-400"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='5' viewBox='0 0 10 5'><path fill='none' stroke='%233B82F6' stroke-width='2' d='M0 0l5 5 5-5'/></svg>")`,
+                        backgroundPosition: 'right 0.75rem center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '10px 5px',
+                      }}
                     >
-                      {colorOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                      {presetColors.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="color"
+                          value={logoConfig.customBackgroundHex || '#FFFFFF'}
+                          onChange={(e) => handleInputChange('customBackgroundHex', e.target.value)}
+                          className="w-16 h-16 rounded-full border-0 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Custom color name (e.g., Off White)"
+                          value={logoConfig.customBackgroundColor || ''}
+                          onChange={(e) => setLogoConfig({
+                            ...logoConfig,
+                            customBackgroundColor: e.target.value
+                          })}
+                          className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {customColors.map(color => (
+                          <div
+                            key={color.name}
+                            onClick={() => setLogoConfig({
+                              ...logoConfig,
+                              customBackgroundHex: color.hex,
+                              customBackgroundColor: color.name
+                            })}
+                            className={`${cardInteractions.selectable} h-8 w-full rounded-full relative flex items-center justify-center ${
+                              logoConfig.customBackgroundHex === color.hex ? 'ring-2 ring-blue-500' : ''
+                            }`}
+                            style={{ backgroundColor: color.hex }}
+                            title={color.name}
+                          >
+                            {logoConfig.customBackgroundHex === color.hex && (
+                              <svg className="w-4 h-4 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            <span className="absolute text-xs text-white font-medium opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black bg-opacity-50 rounded px-1 py-0.5">
+                              {color.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Selected:</span>
+                    <div
+                      className="h-6 w-6 rounded-full border transition-all duration-200"
+                      style={{ 
+                        backgroundColor: logoConfig.backgroundColorMode === 'custom' 
+                          ? logoConfig.customBackgroundHex 
+                          : logoConfig.backgroundColor 
+                      }}
+                    />
+                    <span className="text-sm">
+                      {logoConfig.backgroundColorMode === 'custom' 
+                        ? (logoConfig.customBackgroundColor || 'Custom') 
+                        : presetColors.find(c => c.value === logoConfig.backgroundColor)?.label || logoConfig.backgroundColor}
+                    </span>
                   </div>
                 </div>
 
@@ -430,7 +620,6 @@ const ImageGenerator = () => {
                   <li className="flex items-center"><div className="w-4 h-4 bg-purple-500 mr-2 rounded"></div>Purple: Creativity, luxury</li>
                 </ul>
               </div>
-              {/* Other design tip sections could be added here */}
             </div>
           </CardContent>
         </Card>

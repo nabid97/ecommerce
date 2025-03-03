@@ -1,115 +1,161 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDivider } from '../components/ui/card/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
 import * as THREE from 'three';
 import { cardInteractions } from '../components/ui/card/Card.styles';
 
-// ClothingVisualizer remains unchanged for brevity
+// ClothingVisualizer component with improved error handling
 const ClothingVisualizer = ({ clothingType, color, logoImage, logoPosition, logoSize }) => {
-    const containerRef = useRef(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const containerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-    useEffect(() => {
-        if (!containerRef.current) return;
-        setIsLoading(true);
-        
-        const width = containerRef.current.clientWidth;
-        const height = width * 0.8;
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(width, height);
-        containerRef.current.innerHTML = '';
-        containerRef.current.appendChild(renderer.domElement);
-        
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 1000);
-        camera.position.z = 10;
-        
-        const clothingPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(width * 0.8, height * 0.7),
-            new THREE.MeshBasicMaterial({ color: getHexFromColorName(color || 'white'), transparent: true })
-        );
-        scene.add(clothingPlane);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#333333';
-        ctx.font = 'bold 40px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(clothingType, canvas.width/2, canvas.height/2);
-        
-        const textTexture = new THREE.CanvasTexture(canvas);
-        const textPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(width * 0.6, height * 0.2),
-            new THREE.MeshBasicMaterial({ map: textTexture, transparent: true })
-        );
-        textPlane.position.set(0, -height/3, 0.1);
-        scene.add(textPlane);
-        
-        if (logoImage) {
-            const logoTextureLoader = new THREE.TextureLoader();
-            const logoCoordinates = getLogoCoordinates(logoPosition, width, height);
-            const logoScale = getLogoScale(logoSize, width);
-            
-            logoTextureLoader.load(logoImage, logoTexture => {
-                const logoAspect = logoTexture.image.width / logoTexture.image.height;
-                const logoWidth = logoScale;
-                const logoHeight = logoScale / logoAspect;
-                
-                const logoPlane = new THREE.Mesh(
-                    new THREE.PlaneGeometry(logoWidth, logoHeight),
-                    new THREE.MeshBasicMaterial({ map: logoTexture, transparent: true })
-                );
-                logoPlane.position.set(logoCoordinates.x, logoCoordinates.y, 0.2);
-                scene.add(logoPlane);
-                renderer.render(scene, camera);
-                setIsLoading(false);
-            }, undefined, (error) => {
-                console.error('Error loading logo texture:', error);
-                renderer.render(scene, camera);
-                setIsLoading(false);
-            });
-        } else {
-            renderer.render(scene, camera);
-            setIsLoading(false);
-        }
-        
-        const handleResize = () => {
-            if (!containerRef.current) return;
-            const newWidth = containerRef.current.clientWidth;
-            const newHeight = newWidth * 0.8;
-            renderer.setSize(newWidth, newHeight);
-            camera.left = -newWidth / 2;
-            camera.right = newWidth / 2;
-            camera.top = newHeight / 2;
-            camera.bottom = -newHeight / 2;
-            camera.updateProjectionMatrix();
-            renderer.render(scene, camera);
-        };
-        
-        window.addEventListener('resize', handleResize);
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            if (containerRef.current?.contains(renderer.domElement)) {
-                containerRef.current.removeChild(renderer.domElement);
-            }
-        };
-    }, [clothingType, color, logoImage, logoPosition, logoSize]);
-    
-    return (
-        <div className="relative">
-            <div ref={containerRef} className="w-full h-64 bg-white rounded shadow-sm"/>
-            {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
-                    <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                </div>
-            )}
-        </div>
-    );
+  useEffect(() => {
+      if (!containerRef.current) return;
+      setIsLoading(true);
+      setLoadError(false);
+      
+      const width = containerRef.current.clientWidth;
+      const height = width * 0.8;
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      
+      // Store ref value in a variable to use in cleanup
+      const currentContainer = containerRef.current;
+      currentContainer.innerHTML = '';
+      currentContainer.appendChild(renderer.domElement);
+      
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 1000);
+      camera.position.z = 10;
+      
+      const clothingPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(width * 0.8, height * 0.7),
+          new THREE.MeshBasicMaterial({ color: getHexFromColorName(color || 'white'), transparent: true })
+      );
+      scene.add(clothingPlane);
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(clothingType, canvas.width/2, canvas.height/2);
+      
+      const textTexture = new THREE.CanvasTexture(canvas);
+      const textPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(width * 0.6, height * 0.2),
+          new THREE.MeshBasicMaterial({ map: textTexture, transparent: true })
+      );
+      textPlane.position.set(0, -height/3, 0.1);
+      scene.add(textPlane);
+      
+      // Render the basic scene without logo first
+      renderer.render(scene, camera);
+      
+      // Only try to add logo if one is provided
+      if (logoImage) {
+          // First, create an image element to load the logo
+          const img = new Image();
+          img.crossOrigin = "Anonymous"; // Important for CORS
+          
+          img.onload = () => {
+              try {
+                  // Once loaded, create a material with the image
+                  const logoTexture = new THREE.Texture(img);
+                  logoTexture.needsUpdate = true;
+                  
+                  const logoCoordinates = getLogoCoordinates(logoPosition, width, height);
+                  const logoScale = getLogoScale(logoSize, width);
+                  
+                  // Calculate aspect ratio
+                  const logoAspect = img.width / img.height;
+                  const logoWidth = logoScale;
+                  const logoHeight = logoScale / logoAspect;
+                  
+                  // Create the logo plane
+                  const logoPlane = new THREE.Mesh(
+                      new THREE.PlaneGeometry(logoWidth, logoHeight),
+                      new THREE.MeshBasicMaterial({ 
+                          map: logoTexture, 
+                          transparent: true,
+                          alphaTest: 0.5 // Help with transparency issues
+                      })
+                  );
+                  
+                  logoPlane.position.set(logoCoordinates.x, logoCoordinates.y, 0.2);
+                  scene.add(logoPlane);
+                  
+                  // Render the scene with the logo
+                  renderer.render(scene, camera);
+                  setIsLoading(false);
+              } catch (err) {
+                  console.error('Error creating texture:', err);
+                  setLoadError(true);
+                  setIsLoading(false);
+              }
+          };
+          
+          img.onerror = (err) => {
+              console.error('Error loading logo in visualizer:', err);
+              setLoadError(true);
+              setIsLoading(false);
+          };
+          
+          // Set the source - should work with both URLs and data URLs
+          img.src = logoImage;
+      } else {
+          // No logo to load
+          setIsLoading(false);
+      }
+      
+      const handleResize = () => {
+          if (!currentContainer) return;
+          const newWidth = currentContainer.clientWidth;
+          const newHeight = newWidth * 0.8;
+          renderer.setSize(newWidth, newHeight);
+          camera.left = -newWidth / 2;
+          camera.right = newWidth / 2;
+          camera.top = newHeight / 2;
+          camera.bottom = -newHeight / 2;
+          camera.updateProjectionMatrix();
+          renderer.render(scene, camera);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => {
+          window.removeEventListener('resize', handleResize);
+          if (currentContainer?.contains(renderer.domElement)) {
+              currentContainer.removeChild(renderer.domElement);
+          }
+      };
+  }, [clothingType, color, logoImage, logoPosition, logoSize]);
+  
+  return (
+      <div className="relative">
+          <div ref={containerRef} className="w-full h-64 bg-white rounded shadow-sm"/>
+          {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+              </div>
+          )}
+          {loadError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+                  <div className="text-red-500 text-center p-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <p>Failed to load logo visualization</p>
+                  </div>
+              </div>
+          )}
+      </div>
+  );
 };
 
 // Helper functions unchanged
@@ -142,7 +188,6 @@ const Clothing = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
     const [generateVisualization, setGenerateVisualization] = useState(false);
 
@@ -233,27 +278,50 @@ const Clothing = () => {
     };
 
     const handleLogoUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        setError('');
-        if (!file.type.match('image.*')) {
-            setError('Please select an image file');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            setError('File size should be less than 5MB');
-            return;
-        }
-        if (logoPreview && logoPreview.startsWith('blob:')) {
-            URL.revokeObjectURL(logoPreview);
-        }
-        setLogoFile(file);
-        const objectUrl = URL.createObjectURL(file);
-        setLogoPreview(objectUrl);
-        if (!generateVisualization) {
-            setGenerateVisualization(true);
-        }
-    };
+      const file = e.target.files[0];
+      if (!file) return;
+      setError('');
+      
+      // Validate file type
+      if (!file.type.match('image.*')) {
+          setError('Please select an image file');
+          return;
+      }
+      
+      // Validate file size
+      if (file.size > 5 * 1024 * 1024) {
+          setError('File size should be less than 5MB');
+          return;
+      }
+      
+      // Clean up previous blob URL if it exists
+      if (logoPreview && logoPreview.startsWith('blob:')) {
+          URL.revokeObjectURL(logoPreview);
+      }
+      
+      try {
+          // Create a FileReader to read the file as a data URL instead of blob URL
+          const reader = new FileReader();
+          
+          reader.onload = (event) => {
+              // This will be a data URL (base64) which is more reliable than blob URLs
+              setLogoPreview(event.target.result);
+              if (!generateVisualization) {
+                  setGenerateVisualization(true);
+              }
+          };
+          
+          reader.onerror = () => {
+              setError('Failed to read the image file. Please try another file.');
+          };
+          
+          // Read the file as a data URL
+          reader.readAsDataURL(file);
+      } catch (err) {
+          console.error('Error handling file upload:', err);
+          setError('An error occurred while processing the file.');
+      }
+  };
 
     const calculatePrice = () => {
         const basePrices = {
@@ -270,11 +338,6 @@ const Clothing = () => {
             tax: total * 0.08,
             total: total * 1.08
         };
-    };
-
-    const generateClothingImage = async () => {
-        setError('');
-        setGenerateVisualization(true);
     };
 
     const handleSubmit = async () => {
@@ -677,35 +740,36 @@ const Clothing = () => {
                                         id="logo-upload"
                                     />
                                     <label htmlFor="logo-upload" className="cursor-pointer block">
-                                        {logoPreview ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={logoPreview}
-                                                    alt="Logo Preview"
-                                                    className="max-h-48 mx-auto object-contain"
-                                                    onLoad={() => console.log("Logo image loaded successfully")}
-                                                    onError={(e) => {
-                                                        console.error('Failed to load logo preview image');
-                                                        e.target.alt = 'Failed to load logo';
-                                                        setError('Failed to display logo preview');
-                                                    }}
-                                                />
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        setLogoPreview(null);
-                                                        setLogoFile(null);
-                                                    }}
-                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                                    title="Remove logo"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        ) : (
+                                    {logoPreview ? (
+    <div className="relative">
+        <img
+            src={logoPreview}
+            alt="Logo Preview"
+            className="max-h-48 mx-auto object-contain"
+            onLoad={() => console.log("Logo image loaded successfully")}
+            onError={(e) => {
+                console.error('Failed to load logo preview image');
+                e.target.onerror = null; // Prevent infinite error loop
+                e.target.src = "/api/placeholder/200/200?text=Loading+Error";
+                setError('Failed to display logo preview. Please try another image.');
+            }}
+        />
+        <button
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setLogoPreview(null);
+            }}
+            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            title="Remove logo"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+        </button>
+    </div>
+) : (
+    
                                             <div className="space-y-2">
                                                 <div className="mx-auto w-12 h-12 text-gray-400">
                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -882,5 +946,3 @@ const Clothing = () => {
 };
 
 export default Clothing;
-
-//up

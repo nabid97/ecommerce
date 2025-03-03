@@ -12,8 +12,9 @@ export const fabricApi = {
   },
 
   checkAvailability: async (fabricId, quantity) => {
-    const response = await api.get(`/fabrics/${fabricId}/availability`, {
-      params: { quantity }
+    // Updated to match the server route
+    const response = await api.get(`/fabrics/check-availability`, {
+      params: { fabricId, quantity }
     });
     return response.data;
   },
@@ -22,6 +23,12 @@ export const fabricApi = {
     const response = await api.get(`/fabrics/${fabricId}/pricing`, {
       params: { quantity }
     });
+    return response.data;
+  },
+  
+  placeOrder: async (orderData) => {
+    // Ensure this matches the '/fabrics/orders' endpoint
+    const response = await api.post('/fabrics/orders', orderData);
     return response.data;
   }
 };

@@ -11,13 +11,18 @@ export const logoApi = {
       console.log('Logo Generation Request Config:', config);
 
       // Construct prompt for the logo
-      const prompt = `Create a professional ${config.style || 'modern'} logo design with text "${config.text}" 
-        in ${config.font || 'Arial'} font style. 
-        Main color ${config.color || '#000000'}, 
-        background color ${config.backgroundColor || '#FFFFFF'}. 
-        Clean, minimalist, business-appropriate logo.
+      const prompt = 
+      `- Create a professional ${config.style || 'modern'} logo design that strictly follows these specifications. The final image should ONLY contain the logo design and no additional text, labels, or annotations:
+       - with text "${config.text}" in ${config.textEffect || 'Random'} font style. 
+       - Main color ${config.color || 'White'}, (if it is a hex RGB code then convert it to the actual colour.)
+       - Background color ${config.backgroundColor || 'Black'}. (if it is a hex RGB code then convert it to the actual colour.)
+       - Dimensions: ${config.size}
+       - Ensure the design is clean, minimalistic, and suitable for business use. Do not include any extraneous elements or random text.
         ${config.additionalInstructions ? `Additional details: ${config.additionalInstructions}` : ''}`;
 
+
+
+  
       // Add bucket information to request
       const requestData = { 
         prompt, 
