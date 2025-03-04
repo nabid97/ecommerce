@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const Navigation = () => {
+const Navigation: FC = () => {
   const { user, logout } = useAuth();
 
   return (

@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { FC, ReactNode } from 'react';
 import Navigation from './Navigation';
 
-const Layout = ({ children }) => {
+interface LayoutProps {
+  children: ReactNode;
+}
+
+const Layout: FC<LayoutProps> = ({ children }) => {
   return (
     <div className="page-container">
       <Navigation />

@@ -1,20 +1,26 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, FC } from 'react';
 import { Card, CardContent } from './ui/card/Card';
 
-const ImageUploader = ({ onImageUpload }) => {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
+interface ImageUploaderProps {
+  onImageUpload: (imageUrl: string) => void;
+}
 
-  const handleFileChange = useCallback((e) => {
-    const selectedFile = e.target.files[0];
+const ImageUploader: FC<ImageUploaderProps> = ({ onImageUpload }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
     setError('');
+
+    if (!selectedFile) return;
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml'];
-    if (!validTypes.includes(selectedFile?.type)) {
+    if (!validTypes.includes(selectedFile.type)) {
       setError('Please upload a valid image file (JPEG, PNG, or SVG)');
       return;
     }
@@ -25,14 +31,12 @@ const ImageUploader = ({ onImageUpload }) => {
       return;
     }
 
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(selectedFile);
-    }
+    setFile(selectedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
   }, []);
 
   const handleUpload = async () => {
@@ -55,7 +59,7 @@ const ImageUploader = ({ onImageUpload }) => {
       });
 
       // Wrap XHR in a Promise
-      const uploadPromise = new Promise((resolve, reject) => {
+      const uploadPromise = new Promise<{ url: string }>((resolve, reject) => {
         xhr.onload = () => {
           if (xhr.status === 200) {
             const response = JSON.parse(xhr.responseText);
@@ -80,12 +84,12 @@ const ImageUploader = ({ onImageUpload }) => {
     }
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -95,7 +99,7 @@ const ImageUploader = ({ onImageUpload }) => {
         target: {
           files: [droppedFile]
         }
-      };
+      } as React.ChangeEvent<HTMLInputElement>;
       handleFileChange(changeEvent);
     }
   };
@@ -144,7 +148,8 @@ const ImageUploader = ({ onImageUpload }) => {
                     className="max-h-48 mx-auto"
                   />
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       setFile(null);
                       setPreview(null);
                       setUploadProgress(0);
