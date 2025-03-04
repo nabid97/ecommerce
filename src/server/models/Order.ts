@@ -1,8 +1,63 @@
-const mongoose = require('mongoose');
+// src/server/models/Order.ts
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
-const orderSchema = new mongoose.Schema({
+// Interfaces for embedded documents
+export interface IOrderItemCustomizations {
+  size?: string;
+  color?: string;
+  logo?: Types.ObjectId;
+  fabric?: string;
+  style?: string;
+  [key: string]: any;
+}
+
+export interface IOrderItem {
+  type: 'fabric' | 'clothing';
+  productId: Types.ObjectId;
+  quantity: number;
+  price: number;
+  customizations?: IOrderItemCustomizations;
+}
+
+export interface IShippingAddress {
+  name: string;
+  companyName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phoneNumber: string;
+}
+
+export interface IPaymentDetails {
+  method?: string;
+  transactionId?: string;
+  amount?: number;
+  currency?: string;
+}
+
+// Main Order interface
+export interface IOrder extends Document {
+  userId: Types.ObjectId;
+  items: IOrderItem[];
+  shippingAddress: IShippingAddress;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentDetails?: IPaymentDetails;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  notes?: string;
+  estimatedDelivery?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const orderSchema = new Schema<IOrder>({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
@@ -13,7 +68,7 @@ const orderSchema = new mongoose.Schema({
       required: true
     },
     productId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       required: true,
       refPath: 'items.type'
     },
@@ -30,7 +85,7 @@ const orderSchema = new mongoose.Schema({
       size: String,
       color: String,
       logo: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Logo'
       },
       fabric: String,
@@ -112,4 +167,6 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+const Order = mongoose.model<IOrder>('Order', orderSchema);
+
+export default Order;

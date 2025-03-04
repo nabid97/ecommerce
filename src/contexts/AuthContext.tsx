@@ -1,16 +1,19 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, FC } from 'react';
 import { authService } from '../services/AuthService';
+import { User, AuthState, LoginCredentials, RegistrationData } from '../types/auth';
+import { ChildrenProps } from '../types/components';
 
-const AuthContext = createContext(null);
+// Create a strongly typed context
+const AuthContext = createContext<AuthState | null>(null);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export const AuthProvider: FC<ChildrenProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check authentication status on app load
-    const checkAuthStatus = async () => {
+    const checkAuthStatus = async (): Promise<void> => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
@@ -29,31 +32,33 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (credentials) => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     try {
       setError(null);
       const userData = await authService.login(credentials);
       setUser(userData);
       return userData;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Login failed';
+      setError(errorMessage);
       throw err;
     }
   };
 
-  const register = async (registrationData) => {
+  const register = async (registrationData: RegistrationData): Promise<User> => {
     try {
       setError(null);
       const userData = await authService.register(registrationData);
       setUser(userData);
       return userData;
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Registration failed';
+      setError(errorMessage);
       throw err;
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
       await authService.logout();
       setUser(null);
@@ -63,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value: AuthState = {
     user,
     loading,
     error,
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthState => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');

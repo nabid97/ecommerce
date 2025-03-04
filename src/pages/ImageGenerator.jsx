@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
 import { useAuth } from '../contexts/AuthContext';
 import LogoGenerator from '../components/LogoGenerator';
 
-const ImageGenerator = () => {
+const ImageGenerator: FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('generator');
-  const [generatedLogo, setGeneratedLogo] = useState(null);
+  const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'generator' | 'gallery' | 'help'>('generator');
+  const [generatedLogo, setGeneratedLogo] = useState<string | null>(null);
 
-  const handleLogoGenerated = (logoUrl) => {
+  const handleLogoGenerated = (logoUrl: string): void => {
     setGeneratedLogo(logoUrl);
   };
 

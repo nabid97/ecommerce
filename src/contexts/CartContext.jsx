@@ -1,22 +1,24 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, FC } from 'react';
+import { CartContextProps, ChildrenProps } from '../types/components';
+import { CartItem } from '../types/models';
 
-const CartContext = createContext(null);
+const CartContext = createContext<CartContextProps | null>(null);
 
-export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
+export const CartProvider: FC<ChildrenProps> = ({ children }) => {
+  const [cart, setCart] = useState<CartItem[]>(() => {
     const savedCart = localStorage.getItem('cart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
   
-  const [total, setTotal] = useState(0);
-  const [itemCount, setItemCount] = useState(0);
+  const [total, setTotal] = useState<number>(0);
+  const [itemCount, setItemCount] = useState<number>(0);
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
     calculateTotals();
   }, [cart]);
 
-  const calculateTotals = () => {
+  const calculateTotals = (): void => {
     const totals = cart.reduce(
       (acc, item) => {
         // For fabric items, we use the price directly as it already includes length and quantity
@@ -32,7 +34,7 @@ export const CartProvider = ({ children }) => {
     setItemCount(totals.itemCount);
   };
 
-  const addToCart = (item) => {
+  const addToCart = (item: CartItem): void => {
     setCart(prevCart => {
       const existingItemIndex = prevCart.findIndex(
         cartItem => cartItem.id === item.id && 
@@ -49,7 +51,7 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const removeFromCart = (itemId, customizations) => {
+  const removeFromCart = (itemId: string, customizations?: Record<string, any>): void => {
     setCart(prevCart => 
       prevCart.filter(item => 
         !(item.id === itemId && 
@@ -58,7 +60,7 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  const updateQuantity = (itemId, customizations, quantity) => {
+  const updateQuantity = (itemId: string, customizations: Record<string, any> | undefined, quantity: number): void => {
     if (quantity < 1) return;
 
     setCart(prevCart => {
@@ -72,18 +74,18 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const clearCart = () => {
+  const clearCart = (): void => {
     setCart([]);
   };
 
-  const isInCart = (itemId, customizations) => {
+  const isInCart = (itemId: string, customizations?: Record<string, any>): boolean => {
     return cart.some(item => 
       item.id === itemId && 
       JSON.stringify(item.customizations) === JSON.stringify(customizations)
     );
   };
 
-  const getItemQuantity = (itemId, customizations) => {
+  const getItemQuantity = (itemId: string, customizations?: Record<string, any>): number => {
     const item = cart.find(item => 
       item.id === itemId && 
       JSON.stringify(item.customizations) === JSON.stringify(customizations)
@@ -91,7 +93,7 @@ export const CartProvider = ({ children }) => {
     return item ? item.quantity : 0;
   };
 
-  const value = {
+  const value: CartContextProps = {
     cart,
     total,
     itemCount,
@@ -110,7 +112,7 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-export const useCart = () => {
+export const useCart = (): CartContextProps => {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');

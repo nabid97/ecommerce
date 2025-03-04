@@ -1,7 +1,70 @@
-// src/server/models/Fabric.js
-const mongoose = require('mongoose');
+// src/server/models/Fabric.ts
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
-const fabricSchema = new mongoose.Schema({
+// Interfaces for embedded documents
+export interface IFabricColor {
+  name: string;
+  code: string;
+  inStock: boolean;
+}
+
+export interface IFabricStyle {
+  name: string;
+  description: string;
+  additionalCost: number;
+}
+
+export interface IFabricImage {
+  url: string;
+  alt: string;
+  isPrimary: boolean;
+}
+
+export interface IFabricSpecifications {
+  weight?: string;
+  width?: string;
+  composition?: string;
+  careInstructions?: string[];
+}
+
+export interface IFabricStock {
+  available: number;
+  reserved: number;
+  reorderPoint: number;
+}
+
+export interface IFabricMetadata {
+  searchTags?: string[];
+  categories?: string[];
+  [key: string]: any;
+}
+
+// Main Fabric interface
+export interface IFabric extends Document {
+  id?: string; // String ID field for lookups
+  name: string;
+  description: string;
+  type: string;
+  colors: IFabricColor[];
+  price: number;
+  minOrderQuantity: number;
+  availableStyles?: IFabricStyle[];
+  images?: IFabricImage[];
+  specifications?: IFabricSpecifications;
+  stock: IFabricStock;
+  status: 'active' | 'inactive' | 'discontinued';
+  metadata?: IFabricMetadata;
+  isQuantityAvailable: (quantity: number) => boolean;
+  reserveQuantity: (quantity: number) => Promise<IFabric>;
+  availableQuantity?: number;
+}
+
+// Fabric Model Interface
+interface IFabricModel extends Model<IFabric> {
+  findByAnyId: (id: string) => Promise<IFabric | null>;
+}
+
+const fabricSchema = new Schema<IFabric>({
   // Add a string ID field that can be used for lookups
   id: {
     type: String,
@@ -89,17 +152,17 @@ const fabricSchema = new mongoose.Schema({
 });
 
 // Virtual for available quantity
-fabricSchema.virtual('availableQuantity').get(function() {
+fabricSchema.virtual('availableQuantity').get(function(this: IFabric) {
   return this.stock.available - this.stock.reserved;
 });
 
 // Method to check if quantity is available
-fabricSchema.methods.isQuantityAvailable = function(requestedQuantity) {
+fabricSchema.methods.isQuantityAvailable = function(this: IFabric, requestedQuantity: number): boolean {
   return this.stock.available >= requestedQuantity;
 };
 
 // Method to reserve quantity
-fabricSchema.methods.reserveQuantity = async function(quantity) {
+fabricSchema.methods.reserveQuantity = async function(this: IFabric, quantity: number): Promise<IFabric> {
   if (!this.isQuantityAvailable(quantity)) {
     throw new Error('Insufficient quantity available');
   }
@@ -109,7 +172,7 @@ fabricSchema.methods.reserveQuantity = async function(quantity) {
 };
 
 // Static method to find by string ID or ObjectId
-fabricSchema.statics.findByAnyId = async function(id) {
+fabricSchema.statics.findByAnyId = async function(this: IFabricModel, id: string): Promise<IFabric | null> {
   // First try as ObjectId
   try {
     const byObjectId = await this.findById(id);
@@ -126,4 +189,6 @@ fabricSchema.statics.findByAnyId = async function(id) {
   return await this.findOne({ $or: [{ code: id }, { 'metadata.sku': id }] });
 };
 
-module.exports = mongoose.model('Fabric', fabricSchema);
+const Fabric = mongoose.model<IFabric, IFabricModel>('Fabric', fabricSchema);
+
+export default Fabric;

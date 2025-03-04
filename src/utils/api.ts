@@ -1,8 +1,9 @@
-import axios from 'axios';
+// src/utils/api.ts
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import LoggingService from './LoggingService';
 import AppError from './AppError';
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
@@ -12,9 +13,9 @@ const api = axios.create({
 
 // Request interceptor for adding authentication token
 api.interceptors.request.use(
-  (config) => {
+  (config: AxiosRequestConfig): AxiosRequestConfig => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -27,7 +28,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
+  (error: AxiosError): Promise<AxiosError> => {
     LoggingService.error('Request Interceptor Error', error);
     return Promise.reject(error);
   }
@@ -35,7 +36,7 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling and logging
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse): AxiosResponse => {
     // Log successful responses in development
     LoggingService.debug('API Response', {
       url: response.config.url,
@@ -45,7 +46,7 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  (error: AxiosError): Promise<never> => {
     // Comprehensive error handling
     const processedError = AppError.handleError(error);
 

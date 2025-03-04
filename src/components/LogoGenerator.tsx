@@ -1,10 +1,32 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardActions, CardDivider } from '../components/ui/card/Card';
-import { Alert, AlertDescription } from '../components/ui/alert/Alert';
+import React, { FC, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardActions, CardDivider } from './ui/card/Card';
+import { Alert, AlertDescription } from './ui/alert/Alert';
 import { logoApi } from '../api/logoApi';
+import { LogoGeneratorProps } from '../types/components';
+import { LogoConfig } from '../types/models';
 
-const LogoGenerator = ({ onLogoGenerate }) => {
-  const [logoConfig, setLogoConfig] = useState({
+interface FontOption {
+  value: string;
+  label: string;
+}
+
+interface SizeOption {
+  value: string;
+  label: string;
+}
+
+interface ColorOption {
+  value: string;
+  label: string;
+}
+
+interface TextEffectOption {
+  value: string;
+  label: string;
+}
+
+const LogoGenerator: FC<LogoGeneratorProps> = ({ onLogoGenerate }) => {
+  const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     text: '',
     color: '#3B82F6',
     backgroundColor: 'White',
@@ -15,12 +37,12 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     additionalInstructions: ''
   });
 
-  const [generatedLogo, setGeneratedLogo] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [generatedLogo, setGeneratedLogo] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [copied, setCopied] = useState<boolean>(false);
 
-  const fontOptions = [
+  const fontOptions: FontOption[] = [
     { value: 'Arial', label: 'Arial (Sans-serif)' },
     { value: 'Helvetica', label: 'Helvetica (Sans-serif)' },
     { value: 'Times New Roman', label: 'Times New Roman (Serif)' },
@@ -32,14 +54,14 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     { value: 'Random', label: 'Random' }
   ];
 
-  const sizeOptions = [
+  const sizeOptions: SizeOption[] = [
     { value: 'small', label: 'Small' },
     { value: 'medium', label: 'Medium' },
     { value: 'large', label: 'Large' },
     { value: 'random', label: 'Random' }
   ];
 
-  const colorOptions = [
+  const colorOptions: ColorOption[] = [
     { label: 'Red', value: 'Red' },
     { label: 'Green', value: 'Green' },
     { label: 'Blue', value: 'Blue' },
@@ -53,18 +75,17 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     { label: 'White', value: 'White' }
   ];
 
-
-    const textEffectOptions = [
-      { value: 'normal', label: 'Normal' },
-      { value: 'bold', label: 'Bold' },
-      { value: 'italic', label: 'Italic' },
-      { value: 'underline', label: 'Underline' },
-      { value: 'modern', label: 'Modern' },
-      { value: 'random', label: 'Random' },
-      { value: 'football', label: 'Football' }
+  const textEffectOptions: TextEffectOption[] = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'bold', label: 'Bold' },
+    { value: 'italic', label: 'Italic' },
+    { value: 'underline', label: 'Underline' },
+    { value: 'modern', label: 'Modern' },
+    { value: 'random', label: 'Random' },
+    { value: 'football', label: 'Football' }
   ];
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     if (!logoConfig.text.trim()) {
       setError('Please enter logo text');
       return;
@@ -76,18 +97,20 @@ const LogoGenerator = ({ onLogoGenerate }) => {
       const response = await logoApi.generateLogo(logoConfig);
       if (response?.imageUrl) {
         setGeneratedLogo(response.imageUrl);
-        onLogoGenerate?.(response.imageUrl);
+        if (onLogoGenerate) {
+          onLogoGenerate(response.imageUrl);
+        }
       } else {
         throw new Error('Failed to generate logo');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to generate logo');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyLogoUrl = () => {
+  const handleCopyLogoUrl = (): void => {
     if (generatedLogo) {
       navigator.clipboard.writeText(generatedLogo)
         .then(() => {
@@ -98,7 +121,7 @@ const LogoGenerator = ({ onLogoGenerate }) => {
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof LogoConfig, value: string): void => {
     setLogoConfig(prev => ({ ...prev, [field]: value }));
   };
 
@@ -238,7 +261,7 @@ const LogoGenerator = ({ onLogoGenerate }) => {
                 <textarea
                   placeholder="E.g., include a specific symbol, match with existing branding, etc."
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  rows="3"
+                  rows={3}
                   value={logoConfig.additionalInstructions}
                   onChange={(e) => handleInputChange('additionalInstructions', e.target.value)}
                 />

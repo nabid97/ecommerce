@@ -1,5 +1,4 @@
-// From src/App.js
-import React from 'react';
+import React, { FC } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
@@ -12,10 +11,11 @@ import Fabric from './pages/Fabric';
 import ImageGenerator from './pages/ImageGenerator';
 import Checkout from './pages/Checkout';
 import Cart from './pages/Cart';
-import OrderConfirmation from './pages/OrderConfirmation'; 
-import CardDemo from './pages/CardDemo';// Import the OrderConfirmation component
+import OrderConfirmation from './pages/OrderConfirmation';
+import CardDemo from './pages/CardDemo';
+import './App.css';
 
-const App = () => {
+const App: FC = () => {
   return (
     <AuthProvider>
       <CartProvider>
@@ -30,7 +30,7 @@ const App = () => {
             <Route path="/image-generator" element={<ImageGenerator />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/cart" element={<Cart />} />
-            <Route path="/order-confirmation" element={<OrderConfirmation />} /> {/* Add this route */}
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
             <Route path="/card-demo" element={<CardDemo />} />
           </Routes>
         </Router>
