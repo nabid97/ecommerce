@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDivider, CardActions } from '../components/ui/card/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card/Card';
 import { Alert, AlertDescription } from '../components/ui/alert/Alert';
-import { logoApi } from '../api/logoApi';
 import { useAuth } from '../contexts/AuthContext';
+<<<<<<< HEAD
 import { cardInteractions } from '../components/ui/card/Card.styles';
+=======
+import LogoGenerator from '../components/LogoGenerator';
+>>>>>>> 062eadec27d8e02750ddcab950279131235edd59
 
 const ImageGenerator = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+<<<<<<< HEAD
   const [logoConfig, setLogoConfig] = useState({
     text: '',
     color: '#3B82F6',
@@ -28,10 +32,13 @@ const ImageGenerator = () => {
 
   const [generatedLogo, setGeneratedLogo] = useState(null);
   const [loading, setLoading] = useState(false);
+=======
+>>>>>>> 062eadec27d8e02750ddcab950279131235edd59
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('generator');
+  const [generatedLogo, setGeneratedLogo] = useState(null);
 
+<<<<<<< HEAD
   const fontOptions = [
     { value: 'Arial', label: 'Arial (Sans-serif)' },
     { value: 'Helvetica', label: 'Helvetica (Sans-serif)' },
@@ -133,6 +140,10 @@ const ImageGenerator = () => {
 
   const handleInputChange = (field, value) => {
     setLogoConfig(prev => ({ ...prev, [field]: value }));
+=======
+  const handleLogoGenerated = (logoUrl) => {
+    setGeneratedLogo(logoUrl);
+>>>>>>> 062eadec27d8e02750ddcab950279131235edd59
   };
 
   return (
@@ -186,6 +197,7 @@ const ImageGenerator = () => {
       )}
 
       {activeTab === 'generator' && (
+<<<<<<< HEAD
         <Card variant="elevated" className="shadow-lg border-0 rounded-xl overflow-hidden">
           <CardHeader variant="gradient" className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6">
             <CardTitle className="text-2xl">Logo Generator</CardTitle>
@@ -569,6 +581,9 @@ const ImageGenerator = () => {
             </button>
           </CardActions>
         </Card>
+=======
+        <LogoGenerator onLogoGenerate={handleLogoGenerated} />
+>>>>>>> 062eadec27d8e02750ddcab950279131235edd59
       )}
 
       {activeTab === 'gallery' && (
